@@ -3,6 +3,13 @@
 All notable changes are recorded here. The format is loosely based on Keep a
 Changelog; versions use semantic versioning.
 
+## [0.1.1] - 2026-11-22
+
+### Fixed
+
+- Clarified that only `sak hunt` starts a model-driven child; `plan`, `exploit`,
+  `verify` and `report` are deterministic and need no model key.
+
 ## [0.1.0] - 2026-11-22
 
 Initial public release.
