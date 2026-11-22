@@ -1,0 +1,182 @@
+{
+  "schema": "sak.skill.benchmark.v1",
+  "benchmark": "dummy-target-rubric-v1",
+  "date": "2026-11-22",
+  "target": "dvwa-low",
+  "target_url": "http://127.0.0.1:8080",
+  "profile": "targets/dvwa/blackbox/profile.yaml",
+  "run_dir": "runs/blackbox-dvwa-final",
+  "environment": "macOS SSH tunnel to a remote lab host; DVWA container at Low security",
+  "rubric": {
+    "expected": 11,
+    "confirmed": 11,
+    "needs_validation": 0,
+    "rejected": 0,
+    "coverage": {
+      "covered": 11,
+      "deferred": 0,
+      "missed": 0,
+      "partial": 0,
+      "ratio": 1.0
+    }
+  },
+  "checks": {
+    "confirmed_artifacts": 11,
+    "needs_validation_artifacts": 0,
+    "rejected_artifacts": 0,
+    "requests": 169
+  },
+  "findings": [
+    {
+      "id": "F-DVWA-SQLI-01",
+      "issue": "DVWA-SQLI-01",
+      "title": "SQL injection exposes credentials and data",
+      "class": "sql-injection",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/sqli/?id=1&Submit=Submit",
+      "check": "DVWA-SQLI-01",
+      "artifact": "exploit/DVWA-SQLI-01.json",
+      "evidence_sha256": "1a4ab3c0a9cf241544e91c6ef2b0abdb3c40713ec455390dec49ac9c5886f147"
+    },
+    {
+      "id": "F-DVWA-CMDI-01",
+      "issue": "DVWA-CMDI-01",
+      "title": "Command injection on the ping page",
+      "class": "command-injection",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/exec/",
+      "check": "DVWA-CMDI-01",
+      "artifact": "exploit/DVWA-CMDI-01.json",
+      "evidence_sha256": "e67e7c306bf3f76e7202cb2eee59c7da274c3d71c6d7003ca6e0dcadac624d1a"
+    },
+    {
+      "id": "F-DVWA-UPLOAD-01",
+      "issue": "DVWA-UPLOAD-01",
+      "title": "Unrestricted PHP upload leads to code execution",
+      "class": "unrestricted-upload",
+      "severity": "critical",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/upload/",
+      "check": "DVWA-UPLOAD-01",
+      "artifact": "exploit/DVWA-UPLOAD-01.json",
+      "evidence_sha256": "10d94d231f54fa4cd913fd016dbce9f5f69f515e416327652c8809d5a1ccf424"
+    },
+    {
+      "id": "F-DVWA-XSS-R-01",
+      "issue": "DVWA-XSS-R-01",
+      "title": "Reflected XSS in the name parameter",
+      "class": "xss-reflected",
+      "severity": "medium",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/xss_r/?name=test",
+      "check": "DVWA-XSS-R-01",
+      "artifact": "exploit/DVWA-XSS-R-01.json",
+      "evidence_sha256": "5ca2bb3d99051d7318672762351debf98e6c9115445abf9ab8864b93d826f7cd"
+    },
+    {
+      "id": "F-DVWA-XSS-S-01",
+      "issue": "DVWA-XSS-S-01",
+      "title": "Stored XSS in the guestbook",
+      "class": "xss-stored",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/xss_s/",
+      "check": "DVWA-XSS-S-01",
+      "artifact": "exploit/DVWA-XSS-S-01.json",
+      "evidence_sha256": "a82141f405bec24560b0bef2cd688a29093fc527f352405889f96707f22e58dd"
+    },
+    {
+      "id": "F-DVWA-CSRF-01",
+      "issue": "DVWA-CSRF-01",
+      "title": "Password change without a CSRF token",
+      "class": "csrf",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/csrf/?password_new=x&password_conf=x&Change=Change",
+      "check": "DVWA-CSRF-01",
+      "artifact": "exploit/DVWA-CSRF-01.json",
+      "evidence_sha256": "b27a54eba25c230fd28a87fba9ab74f49ba8d2b1d5f9e2d579fe504451d10224"
+    },
+    {
+      "id": "F-DVWA-FI-01",
+      "issue": "DVWA-FI-01",
+      "title": "Local file inclusion reads arbitrary files",
+      "class": "file-inclusion",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/fi/?page=include.php",
+      "check": "DVWA-FI-01",
+      "artifact": "exploit/DVWA-FI-01.json",
+      "evidence_sha256": "734634b7068e5841f1e778d573db88a3783c968d7fb4739d856e988fc72c4059"
+    },
+    {
+      "id": "F-DVWA-BRUTE-01",
+      "issue": "DVWA-BRUTE-01",
+      "title": "Brute force with no lockout",
+      "class": "brute-force",
+      "severity": "medium",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/brute/?username=admin&password=x&Login=Login",
+      "check": "DVWA-BRUTE-01",
+      "artifact": "exploit/DVWA-BRUTE-01.json",
+      "evidence_sha256": "09567708d7c0edfd1820de291dfcdb8ce7318e37b2a80c81b253f54e74e06f88"
+    },
+    {
+      "id": "F-DVWA-SESSION-01",
+      "issue": "DVWA-SESSION-01",
+      "title": "Predictable session identifiers",
+      "class": "session-management",
+      "severity": "medium",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/weak_id/",
+      "check": "DVWA-SESSION-01",
+      "artifact": "exploit/DVWA-SESSION-01.json",
+      "evidence_sha256": "17a183ceee6c850c6a3d7d60fff4a9a6a934a141bbc34b946fdca86a340537f0"
+    },
+    {
+      "id": "F-DVWA-CSP-01",
+      "issue": "DVWA-CSP-01",
+      "title": "CSP page still executes injected inline script",
+      "class": "csp-bypass",
+      "severity": "medium",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/csp/?include=include.php",
+      "check": "DVWA-CSP-01",
+      "artifact": "exploit/DVWA-CSP-01.json",
+      "evidence_sha256": "bbd92b6ec23a183c772778486a80f6fd4501b3be2cbcbbd2c03769ab8fa96a5e"
+    },
+    {
+      "id": "F-DVWA-CAPTCHA-01",
+      "issue": "DVWA-CAPTCHA-01",
+      "title": "CAPTCHA step can be skipped",
+      "class": "captcha-bypass",
+      "severity": "medium",
+      "status": "confirmed",
+      "entrypoint": "/vulnerabilities/captcha/",
+      "check": "DVWA-CAPTCHA-01",
+      "artifact": "exploit/DVWA-CAPTCHA-01.json",
+      "evidence_sha256": "2b5a80aba5df48032d4e6af6d04fba168994cef031d8c8c83ee71d40d7f383b4"
+    }
+  ],
+  "hunt": {
+    "run_dir": "runs/blackbox-dvwa-hunt",
+    "prompts": [
+      "INV-01"
+    ],
+    "candidates": 2,
+    "errors": 0,
+    "note": "Both candidates are outside the 11-issue rubric and remain needs_validation: client-controlled security-level cookie; upload storage served without a session."
+  },
+  "caveats": [
+    "The CAPTCHA page changes the password without printing the success text; a fresh login proves it and the original demo password is restored.",
+    "The CSP proof observes the CSP header and the raw injected script in the page; a browser dialog was not driven.",
+    "The application demo password is a documented lab default; no real credential is used."
+  ],
+  "commands": [
+    "uv run sak exploit --run runs/blackbox-dvwa-final --target http://127.0.0.1:8080 --profile targets/dvwa/blackbox/profile.yaml --json",
+    "uv run sak verify --run runs/blackbox-dvwa-final --profile targets/dvwa/blackbox/profile.yaml --json",
+    "uv run sak report runs/blackbox-dvwa-final"
+  ]
+}

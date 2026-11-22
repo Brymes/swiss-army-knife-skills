@@ -1,0 +1,671 @@
+prompts:
+  - id: VIBE-01
+    title: Public table endpoint leaks all records
+    category: vibe
+    description: Check whether an anon-style table, datagrid or Supabase-style endpoint returns an unfiltered table to anyone.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The app has an admin table, data browser or client-side datagrid and a public route that feeds it.
+    prompt: |
+      You are a vibe-code hunter. AI-generated apps often expose the whole table through a generic
+      endpoint and rely on the UI to hide it.
+
+      Find the data endpoint behind every table, grid or "admin" view. Request it with no session,
+      then with a normal user session, then with the admin fixture. Compare the rows and fields
+      returned with what the page renders. Pay particular attention to email, role, credits,
+      tokens, internal flags and timestamps.
+
+      Proof is the smallest anonymous or low-privilege response that contains a field the caller
+      should not see. Include the response status, the row count and one redacted field name. Do not
+      download the whole table; request one row or a bounded page and stop.
+
+      Record the sibling safe endpoint, if one exists, as the control. If anonymous access is
+      denied, try one normal user and record the disproof.
+    inputs: [scope.md, route inventory, test identities]
+    mutations:
+      - Call the table endpoint with no cookie.
+      - Call it with the lowest-privilege session and compare fields.
+      - Add a limit or page parameter to request one row.
+      - Change the table name in the path to a related protected table.
+      - Request the JSON and HTML variants of the same grid.
+    evidence:
+      - Anonymous or low-privilege request and response with sensitive field names redacted.
+      - Row count and the exact fields that should be protected.
+      - Comparison with an authorized admin response and the safe sibling.
+    stop_conditions:
+      - Stop after the first bounded response that proves field leakage.
+      - Do not dump the full table, export it or enumerate identifiers.
+      - Do not use a real user record; use fixture accounts.
+      - Stop if the endpoint requires admin and the admin fixture is unavailable.
+    safety:
+      - Authorized targets only; fixture data preferred.
+      - Request a single row or a small page.
+      - Mask emails, tokens and reset values.
+    tags: [data-exposure, table-endpoint, rls]
+    source: sak vibe-code set
+    notes: Common in generated admin dashboards and client-side data browsers.
+
+  - id: VIBE-02
+    title: IDOR read, edit and delete
+    category: vibe
+    description: Prove that one identity can read, edit or delete another identity's object by changing the identifier.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Routes contain object identifiers and the handler looks up by id without an ownership check.
+    prompt: |
+      You are a vibe-code hunter. Your target is a direct object reference that lacks an ownership
+      or tenant check.
+
+      With two fixture identities, capture one object route and its identifier for identity A.
+      As identity B, request the same route with A's identifier. Test read first. Only if read
+      succeeds should you test a benign edit, and only if edit succeeds should you consider delete
+      on a fixture-created object. Keep a control request as A to prove the object exists.
+
+      For each verb, record the exact method, path, status and the minimum field that proves access.
+      Do not enumerate ids; two controlled identifiers are enough. If the response is a 403 or an
+      empty object, record the disproof and try the sibling safe route.
+
+      Delete only a fixture-created object and record how to recreate it. Never delete a real user
+      or shared record.
+    inputs: [scope.md, two test identities, one object identifier per identity]
+    mutations:
+      - Read A's object as B with the same method and path.
+      - Edit one benign field of A's object as B.
+      - Delete a fixture-created object owned by A as B.
+      - Move the identifier from the path to the body or query string.
+      - Try the plural, singular and nested route variants.
+    evidence:
+      - Read, edit and delete request logs for B against A's identifier.
+      - Control request as A showing the object exists.
+      - Before and after state for any edit or delete.
+    stop_conditions:
+      - Stop at the first successful read; do not continue to edit and delete automatically.
+      - Delete only fixture-created objects; never a real account.
+      - Do not enumerate sequential identifiers.
+      - Stop if the only proof needs another real person's data.
+    safety:
+      - Authorized targets only; fixture identities and objects.
+      - Read before write; one benign field; reversible deletes only.
+      - Record cleanup steps.
+    tags: [idor, authorization, object-reference]
+    source: sak vibe-code set
+    notes: One seeded issue can have three proof operations; still report one finding with verbs.
+
+  - id: VIBE-03
+    title: Role mass assignment
+    category: vibe
+    description: Add a privileged field to a profile or signup update and show that the server persists it.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The update handler binds the request body directly to the user or account model.
+    prompt: |
+      You are a vibe-code hunter. Generated update handlers often spread the request body into the
+      model, so any field the client sends is written.
+
+      Inspect the profile, signup and account-update requests. List the fields the UI sends and the
+      fields the model exposes: role, plan, credits, quota, verified, banned, tenant, owner and
+      permissions. Send one extra field with a benign privileged value, such as the lowest admin
+      role your fixture understands, and then read the account through a second endpoint.
+
+      Proof is persistence, not an echoed response. Show the update, the second read and one action
+      that the new role enables, if a harmless action exists. If the field is ignored, record the
+      disproof and stop.
+
+      Do not change a real user's role, plan or balance. Do not grant yourself a role that can
+      delete or export other users' data.
+    inputs: [scope.md, captured update request, account model or source]
+    mutations:
+      - Add role to a profile patch.
+      - Add plan or credits to a signup.
+      - Add verified or banned as a false value.
+      - Add tenant or owner to an account update.
+      - Wrap the extra field in a nested object or array if the handler flattens input.
+    evidence:
+      - Update request and response.
+      - Second read showing the persisted field.
+      - Source trace of the mass assignment or missing allowlist.
+      - A harmless action allowed by the new field, if available.
+    stop_conditions:
+      - Stop after one persisted privileged field.
+      - Do not climb to full admin or change another account.
+      - Do not use a role that can delete, export or bill.
+      - Stop if the field is ignored server-side.
+    safety:
+      - Authorized targets only; fixture accounts.
+      - Benign role values, no destructive capability.
+      - Revert the field and record the rollback.
+    tags: [mass-assignment, authorization, profile]
+    source: sak vibe-code set
+    notes: Pairs with INV-03.
+
+  - id: VIBE-04
+    title: Reset-link reuse
+    category: vibe
+    description: Show that a password-reset token works more than once, never expires or is returned to the requester.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The app returns reset tokens in a response, logs them, or has no consumed-at field.
+    prompt: |
+      You are a vibe-code hunter. Reset flows generated by AI often create a token, return it in the
+      JSON response, and never mark it used.
+
+      Request a reset for a controlled fixture identity. Observe whether the token is returned in
+      the response, logged in an accessible place, or predictable. Confirm the reset once with a
+      new password, then confirm the same token a second time. Also check whether the token still
+      works after the password changes and whether an older token works after a second request.
+
+      Proof is the second successful use, the token returned in a response, or both. Redact the
+      token value and record only a short fingerprint. Do not target a real mailbox and do not
+      change a real account's password.
+
+      If the token is single-use and not disclosed, record the disproof.
+    inputs: [scope.md, controlled fixture identity, reset endpoints]
+    mutations:
+      - Confirm the same token twice.
+      - Reuse an older token after requesting a new one.
+      - Use a token after the password has changed.
+      - Request a reset for an unknown address and inspect the response shape.
+      - Check whether the token appears in the response, headers or logs.
+    evidence:
+      - Request and response showing token disclosure, with the token fingerprinted.
+      - Two confirm requests with the same token and their statuses.
+      - Source trace of the missing used-at check or clear.
+    stop_conditions:
+      - Stop after one reuse or one disclosure.
+      - Use a controlled fixture identity only.
+      - Do not send email or SMS to a third party.
+      - Do not change a real account password.
+    safety:
+      - Authorized targets only; fixture identity and mailbox.
+      - Never print the raw reset token.
+      - Restore the fixture password after the test.
+    tags: [password-reset, token-reuse, authentication]
+    source: sak vibe-code set
+    notes: Token disclosure alone is a finding; reuse makes it stronger.
+
+  - id: VIBE-05
+    title: Direct API call past disabled UI
+    category: vibe
+    description: Reach a hidden or disabled action by calling its route directly, without the UI guard.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: A button is hidden, disabled or role-gated only in the client, but the route exists.
+    prompt: |
+      You are a vibe-code hunter. AI-generated UIs often hide an admin button with CSS or a client
+      condition while the server route has no role check.
+
+      Inventory client-side guards: hidden elements, disabled buttons, route guards, feature flags
+      and conditional rendering. For each, find the request the enabled UI would send. Replay that
+      request as a normal fixture user, with the same headers and body the UI would use, omitting
+      only the client-side gate.
+
+      Proof is a successful response with a security-relevant effect, plus a control that the same
+      action is denied for the same user on a protected sibling route. Record the status and the
+      minimum response fields. Do not trigger a destructive admin action; choose a read-only or
+      cache-purge-style action that the fixture exposes, and stop there.
+
+      If the server checks the role, record the disproof.
+    inputs: [scope.md, client bundle or captured request, normal fixture identity]
+    mutations:
+      - Replay the hidden action with a normal session and no admin role.
+      - Remove the client-only header or flag that the UI adds.
+      - Call the route through the API host instead of the UI host.
+      - Use the plural or legacy path variant of the hidden route.
+      - Send the request with the UI's content type but without the disabled attribute.
+    evidence:
+      - Replayed request and response for the hidden action.
+      - The client-side guard that hid it, with file and line if available.
+      - Control request to the protected sibling showing the expected denial.
+    stop_conditions:
+      - Stop at the first non-destructive hidden action that succeeds.
+      - Do not run purge, delete, migrate or shutdown actions on shared state.
+      - Do not use an admin fixture to prove a normal user can do it.
+      - Stop if the action has irreversible effects.
+    safety:
+      - Authorized targets only; choose read-only or reversible actions.
+      - Never trigger data loss or service disruption.
+      - Record the action's effect and how to reverse it.
+    tags: [ui-bypass, hidden-route, authorization]
+    source: sak vibe-code set
+    notes: Client-side hiding is not authorization.
+
+  - id: VIBE-06
+    title: Quota bypass
+    category: vibe
+    description: Exceed an AI, API or feature quota because only the page checks it, not the API.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, llm]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The UI displays a quota or usage counter, and the expensive endpoint has no matching check.
+    prompt: |
+      You are a vibe-code hunter. Quotas are often rendered by the page while the backing API never
+      counts or refuses.
+
+      Find the quota value and where it is enforced: page render, client store, middleware, service
+      or database constraint. Then call the protected operation enough times to cross the quota by
+      one, using a fixture identity with a small allowance. Read the usage counter afterward.
+
+      Proof is a successful response after the quota should have refused, plus the observed usage
+      above the limit. Stop at limit plus one; do not run a volume test or generate costly content.
+      Use a cheap request and the lowest allowed model or operation.
+
+      If the API returns 429 or an equivalent refusal at the limit, record the disproof and the
+      enforcing layer.
+    inputs: [scope.md, fixture identity, quota value, protected endpoint]
+    mutations:
+      - Call the protected endpoint limit-plus-one times.
+      - Call the JSON API directly while the HTML page shows the limit.
+      - Omit the client header that identifies the quota bucket.
+      - Use a batch or streaming variant that bypasses the counter.
+      - Change the account or tenant header that selects a quota.
+    evidence:
+      - Request count, status codes and observed usage after the limit.
+      - The page or API response showing the quota value.
+      - Source trace of the missing check.
+    stop_conditions:
+      - Stop at limit plus one.
+      - Do not run a volume, load or cost-incurring test.
+      - Do not use a paid external model or real billing.
+      - Stop if the only way to exceed the quota is to create many accounts.
+    safety:
+      - Authorized targets only; cheap synthetic requests.
+      - No denial-of-service or cost abuse.
+      - Use fixture identities and local models.
+    tags: [quota, rate-limit, business-logic]
+    source: sak vibe-code set
+    notes: The HTML page is not an enforcement point.
+
+  - id: VIBE-07
+    title: Credit race overdraw
+    category: vibe
+    description: Race two debits against one balance and show a negative or duplicated balance.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: A handler reads a balance, performs work, then debits without an atomic check.
+    prompt: |
+      You are a vibe-code hunter. Credit and token systems generated by AI often read the balance,
+      do slow work, then subtract without a conditional update.
+
+      Find the spend endpoint and the balance read. Determine whether the debit is atomic
+      (conditional UPDATE, transaction with an immediate lock, or unique ledger entry). If it is
+      not, prepare exactly two concurrent requests whose combined value exceeds the balance by a
+      small amount. Use a fixture identity and synthetic credits.
+
+      Send the two requests as close together as the client allows, then read the balance. Proof is
+      two successes and a negative balance, or a duplicated credit. Stop after one observed
+      overdraw; do not loop, retry or increase concurrency. If the endpoint rejects the second
+      request, record the disproof and the atomic mechanism that protected it.
+
+      Never use real money, real credits or a payment provider.
+    inputs: [scope.md, fixture identity, balance and spend endpoint]
+    mutations:
+      - Send two spend requests whose sum exceeds the balance.
+      - Send the same idempotency key twice with different bodies.
+      - Spend a credit, cancel the work, then spend again before the counter settles.
+      - Use a batch spend with a per-item total above the balance.
+      - Race a spend against a refund or top-up.
+    evidence:
+      - Both request responses and the final balance.
+      - Timestamp and concurrency method.
+      - Source trace of the non-atomic read and write.
+    stop_conditions:
+      - Stop after one overdraw with two requests.
+      - Do not increase concurrency or repeat the race.
+      - Never use real money or a production ledger.
+      - Stop if the target has no fixture balance you can restore.
+    safety:
+      - Authorized targets only; synthetic credits.
+      - Two requests maximum, no sustained load.
+      - Restore the fixture balance afterward.
+    tags: [race-condition, credits, business-logic]
+    source: sak vibe-code set
+    notes: Pairs with INV-09; two requests are enough.
+
+  - id: VIBE-08
+    title: Hostile form values
+    category: vibe
+    description: Submit overlong, negative, empty and injection-shaped values and show they are stored unvalidated.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api]
+    hunter_role: support
+    intensity: normal
+    when_to_use: A form accepts free text or numbers and the handler has no length, type or range validation.
+    prompt: |
+      You are a vibe-code hunter. Generated forms often trust the browser's input attributes and
+      never validate on the server.
+
+      Pick one low-impact form, such as feedback, comment, rating or search. Send a small matrix of
+      hostile values: an overlong string, an empty string, a negative number, a number above the
+      documented range and a string containing quotes, angle brackets and SQL metacharacters.
+      Submit one value per request and keep a valid control.
+
+      Proof is acceptance and persistence of a value the documented rules should reject, shown by a
+      second read. Do not attempt SQL injection exploitation, XSS execution or command injection;
+      the goal is missing validation. If the app stores the value but escapes it on output, record
+      that separately as safe rendering.
+
+      Stop after the first accepted invalid value per field. Do not fill storage with large payloads.
+    inputs: [scope.md, one form endpoint, documented field rules if any]
+    mutations:
+      - Submit text one character over the documented maximum.
+      - Submit an empty required field.
+      - Submit a negative and an out-of-range integer.
+      - Submit quotes, angle brackets and a SQL comment sequence as plain text.
+      - Submit a numeric string where a number is expected.
+    evidence:
+      - Request and response for each accepted hostile value.
+      - Second read showing persistence.
+      - Control request with a valid value.
+    stop_conditions:
+      - Stop after one accepted invalid value per field.
+      - Do not exploit injection; no SQL, XSS or command execution.
+      - Keep payloads small and storage impact negligible.
+      - Stop if the server rejects the value correctly.
+    safety:
+      - Authorized targets only; benign payload sizes.
+      - No destructive or persistent stored payloads.
+      - Clean up fixture-created rows.
+    tags: [input-validation, forms, business-logic]
+    source: sak vibe-code set
+    notes: Missing validation is the finding; execution is out of scope.
+
+  - id: VIBE-09
+    title: Open redirect via next
+    category: vibe
+    description: Make a login or go route redirect to an external or protocol-relative destination through next.
+    applies_to: [web-app, local-fixture]
+    domains: [web]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Login, logout, OAuth callback or a go route accepts a next, return or redirect parameter.
+    prompt: |
+      You are a vibe-code hunter. Redirect parameters are often checked with a substring or prefix
+      test that a protocol-relative or userinfo URL defeats.
+
+      Find every route that takes next, return, redirect, continue or url. Baseline a local path.
+      Then test exactly one protocol-relative value and one userinfo value, such as a double-slash
+      host and an absolute URL with an at-sign before a trusted host. Observe the status and Location
+      header; do not follow the redirect to an external site.
+
+      Proof is a 3xx Location pointing off-origin, plus the safe sibling rejecting the same value.
+      Treat the redirect target as text: never let the client fetch it. If the app only allows
+      local paths, record the disproof.
+
+      Also test an encoded variant only if the first two are rejected, and stop after one accepted
+      off-origin value.
+    inputs: [scope.md, redirect route inventory]
+    mutations:
+      - next equals a protocol-relative host.
+      - next equals an absolute URL with userinfo at a trusted-looking host.
+      - next equals a backslash or encoded-slash variant.
+      - next equals a scheme such as javascript or data.
+      - next equals a local path that later redirects again.
+    evidence:
+      - Request and response status plus the Location header.
+      - The exact value accepted and the safe sibling's rejection.
+      - The validation code or a note that none exists.
+    stop_conditions:
+      - Stop after one accepted off-origin Location.
+      - Never follow the redirect or contact the external host.
+      - Do not use a real phishing destination; use a reserved example domain.
+      - Stop if only same-origin paths are accepted.
+    safety:
+      - Authorized targets only; reserved example domains.
+      - Inspect Location headers, do not fetch them.
+      - No real credential phishing.
+    tags: [open-redirect, next-parameter, url-validation]
+    source: sak vibe-code set
+    notes: The at-sign userinfo form defeats naive trusted-host checks.
+
+  - id: VIBE-10
+    title: Stored XSS through profile fields
+    category: vibe
+    description: Store a script payload in a profile field and show it rendered unescaped on an HTML page.
+    applies_to: [web-app, local-fixture]
+    domains: [web]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: A profile, comment or name field is rendered into HTML without escaping.
+    prompt: |
+      You are a vibe-code hunter. Generated templates often interpolate user fields into HTML
+      directly, while a later "safe" page escapes them.
+
+      Choose one profile field with a low blast radius, such as display name or bio. Store a benign
+      proof payload that is recognizable but does not steal data or contact a third party, for
+      example a script tag that sets document.title to a fixed marker or an image onerror that
+      writes a marker into the DOM. Then load the page that renders it and inspect the returned
+      HTML for the raw payload.
+
+      Proof is the exact payload appearing unescaped in the HTML response, plus the safe sibling
+      returning the escaped form. Do not use a payload that exfiltrates cookies, keystrokes or
+      tokens, and do not target another user's browser. A headless local browser is acceptable only
+      if the fixture provides one and the payload is inert.
+
+      Stop after one stored payload. Remove it or reset the fixture afterward.
+    inputs: [scope.md, profile update and render routes, fixture identity]
+    mutations:
+      - Store a script tag in display name.
+      - Store an image onerror marker in bio.
+      - Store an attribute-breaking value in a profile link.
+      - Store an SVG onload marker where HTML is allowed.
+      - Compare the normal render route with the safe render route.
+    evidence:
+      - Stored value, rendered HTML excerpt with the raw payload, and the safe sibling's escaped output.
+      - The template or renderer responsible.
+      - Cleanup confirmation.
+    stop_conditions:
+      - Stop after one stored payload in one field.
+      - No cookie, token or keystroke exfiltration; no third-party callback.
+      - Do not target another user's session or browser.
+      - Stop if the renderer escapes the payload.
+    safety:
+      - Authorized targets only; inert marker payloads.
+      - Fixture identity and fixture browser only.
+      - Remove the payload and reset state afterward.
+    tags: [xss, stored, output-encoding]
+    source: sak vibe-code set
+    notes: The inert marker proves execution without harming a user.
+
+  - id: VIBE-11
+    title: URL-fetch SSRF
+    category: vibe
+    description: Make a server-side fetch reach a loopback or metadata destination through an allowlist gap.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The app fetches a user-supplied URL for previews, imports, webhooks or image proxies.
+    prompt: |
+      You are a vibe-code hunter. URL fetchers often block a literal string such as 127.0.0.1 while
+      accepting a hostname that resolves to loopback, a redirect or an alternate IP encoding.
+
+      Establish the blocklist by fetching a known loopback URL and a known public URL. Then test one
+      alternate representation at a time, starting with a wildcard DNS name that maps to loopback
+      and a redirect to the same destination. Compare response bodies, status and timing. Use the
+      local fixture's own metadata endpoint as the only internal target.
+
+      Proof is the internal body or a distinctive internal header returned through the fetcher,
+      plus the direct loopback request being blocked. Do not scan internal ranges, cloud metadata
+      or third-party hosts. Do not follow a redirect to an external site.
+
+      Stop at the first internal read. If the fetcher validates every hop and resolves the final
+      address, record the disproof.
+    inputs: [scope.md, fetch endpoint, local internal endpoint, wildcard DNS behavior]
+    mutations:
+      - Use a wildcard DNS host that resolves to loopback.
+      - Use a decimal, octal, hex or abbreviated loopback address.
+      - Chain a redirect from an allowed host to the internal URL.
+      - Use a URL parser ambiguity such as userinfo, backslash or encoded host.
+      - Use a protocol other than http or https only if the fetcher accepts it.
+    evidence:
+      - Fetch request and the returned internal body or header.
+      - The blocked literal loopback control.
+      - Resolver output or documented wildcard mapping, captured offline.
+      - The validation code or a note that it is substring-only.
+    stop_conditions:
+      - Stop at the first internal read.
+      - Never contact a real cloud metadata service or scan internal ranges.
+      - Do not follow redirects to external hosts.
+      - Stop if the fetcher refuses every alternate representation.
+    safety:
+      - Authorized targets only; local fixture metadata only.
+      - One internal destination, no port scanning.
+      - Redact any token returned by the internal endpoint.
+    tags: [ssrf, allowlist, fetch]
+    source: sak vibe-code set
+    notes: Pairs with SSRF-03 and SSRF-06; the payload pack is authorized-target-only.
+
+  - id: VIBE-12
+    title: Cross-user response leakage
+    category: vibe
+    description: Show that a shared cache or response key returns another identity's personalized body.
+    applies_to: [web-app, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Personalized pages are cached publicly or keyed without identity.
+    prompt: |
+      You are a vibe-code hunter. A dashboard or feed cached under the path alone will serve the
+      first user's body to the next user.
+
+      Pick one personalized page. As fixture identity A, request it once and record the body plus
+      any cache headers. As fixture identity B, request the same path once and compare. A hit that
+      returns A's data is the proof. Check Cache-Control, Vary and any X-Cache header, but treat the
+      body as the evidence.
+
+      Do not warm the cache with many requests or poison it for real users. Two sequential requests
+      are enough. If the page is private or keyed by identity, record the disproof and the header
+      that protects it.
+
+      Stop at the first cross-user body. Do not include the full body; quote the minimum field that
+      belongs to A.
+    inputs: [scope.md, two fixture identities, personalized route]
+    mutations:
+      - Request the same path as A then B.
+      - Add or remove a cache-busting query parameter and repeat.
+      - Request the JSON and HTML variants.
+      - Change the Accept or language header between identities.
+      - Compare the safe sibling's cache headers.
+    evidence:
+      - Both requests, cache headers and the minimum field proving A's data reached B.
+      - The cache key or middleware responsible.
+      - Safe sibling control.
+    stop_conditions:
+      - Stop at the first cross-user body.
+      - Two requests only; no cache warming or poisoning.
+      - Do not use real user data.
+      - Stop if the response is private or keyed by identity.
+    safety:
+      - Authorized targets only; fixture identities.
+      - Minimum body excerpt, redacted.
+      - No cache poisoning or eviction.
+    tags: [cache, data-leakage, sessions]
+    source: sak vibe-code set
+    notes: Pairs with INV-13.
+
+  - id: VIBE-13
+    title: Preview-link access
+    category: vibe
+    description: Open a preview route without a session and show it returns private fields.
+    applies_to: [web-app, local-fixture]
+    domains: [web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Preview, share or draft routes exist for convenience and skip the normal auth middleware.
+    prompt: |
+      You are a vibe-code hunter. Preview routes are often added outside the authenticated router
+      so that "anyone with the link" can see a draft.
+
+      Find preview, share, draft, embed and thumbnail routes. Request one with no cookie. If it
+      returns HTML, inspect which fields are embedded in the page or its JSON payload. Compare with
+      the authenticated route and its safe sibling.
+
+      Proof is an anonymous 200 containing a private field, not merely the existence of the route.
+      Quote the minimum field and redact it. Do not enumerate preview identifiers or download media.
+
+      Stop at the first anonymous private read. If the preview requires a signed token or a
+      session, record the disproof.
+    inputs: [scope.md, preview route, fixture object identifier]
+    mutations:
+      - Request the preview route without a cookie.
+      - Request its JSON or API variant.
+      - Change the identifier to another fixture object.
+      - Remove a signature or expiry parameter.
+      - Compare with the safe preview route.
+    evidence:
+      - Anonymous request and the private field in the response.
+      - Authenticated control and safe sibling.
+      - Route registration showing it is outside the auth middleware.
+    stop_conditions:
+      - Stop at the first anonymous private read.
+      - Do not enumerate identifiers or download media.
+      - Do not share the link with a third party.
+      - Stop if a valid signature or session is required.
+    safety:
+      - Authorized targets only; fixture object and minimum data.
+      - Redact private fields.
+      - No external sharing.
+    tags: [preview, authentication, access-control]
+    source: sak vibe-code set
+    notes: Preview routes frequently sit outside the auth router.
+
+  - id: VIBE-14
+    title: AI prompt injection
+    category: vibe
+    description: Embed an instruction in a chat or document input and show the assistant returns another user's data or violates its rules.
+    applies_to: [web-app, api, llm, local-fixture]
+    domains: [llm, web, api]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The app sends user text or retrieved documents to a model with tool or data access.
+    prompt: |
+      You are a vibe-code hunter. The assistant may mix the user's message with retrieved records
+      and system instructions without separating trust levels.
+
+      Start with a benign instruction that asks the assistant to reveal data belonging to another
+      fixture identity, such as the other user's email or a record the caller cannot read. Try one
+      direct phrasing and, if needed, one indirect phrasing inside a document or retrieved note.
+      Do not ask for secrets, credentials or harmful content.
+
+      Proof is the assistant returning a field that belongs to another identity, or performing a
+      tool action the caller is not authorized for. Quote the minimum returned field and the exact
+      injected instruction. Include the conversation or document context needed to reproduce it.
+
+      Stop at the first cross-user disclosure or unauthorized tool action. Do not attempt to
+      exfiltrate system prompts at length or to make the model contact external services.
+    inputs: [scope.md, chat or document endpoint, two fixture identities]
+    mutations:
+      - Ask directly for the other fixture user's email.
+      - Embed the instruction in an uploaded or retrieved document.
+      - Ask the assistant to call a tool on behalf of another identity.
+      - Ask it to ignore previous instructions and print the current record set.
+      - Use a translated or spaced variant only if the first two fail.
+    evidence:
+      - Injected input, assistant output and the other identity's field.
+      - The retrieval or tool path that supplied the data.
+      - Safe sibling control that refuses the same instruction.
+    stop_conditions:
+      - Stop at the first cross-user disclosure or unauthorized tool action.
+      - No secrets, credentials or harmful content.
+      - Do not exfiltrate data to an external service.
+      - Stop if the assistant refuses and the safe sibling also refuses.
+    safety:
+      - Authorized targets only; fixture identities and local models.
+      - Minimum data, no bulk retrieval.
+      - Do not attempt real-world harm or persistence.
+    tags: [prompt-injection, llm, cross-tenant]
+    source: sak vibe-code set
+    notes: Pairs with LLM-01, LLM-02 and LLM-04.

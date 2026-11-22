@@ -1,0 +1,52 @@
+id: osint
+name: OSINT and public footprint
+description: Passive open-source footprint for an authorized engagement; collect only public, attributable records and never touch the target directly.
+profile: custom
+domains:
+  - osint
+  - web
+filters:
+  kinds:
+    - cli
+    - skill
+  statuses:
+    - verified
+    - experimental
+  domains:
+    - osint
+  modes:
+    - passive
+    - blackbox
+include:
+  tools:
+    - blackbird
+    - webseek
+budget:
+  primary: 1
+  support: 2
+  fallback: 1
+  brute: 0
+targets:
+  scope_required: true
+notes: |
+  Roles: primary collects the public footprint with one named tool, support adds a
+  second public source, fallback is a manual search, and brute is closed because
+  OSINT is passive by definition. Experimental cards need explicit approval in
+  scope.md; they are listed here because no verified OSINT card exists yet.
+  Waves:
+    passive: define the identifiers in scope (domains, handles, emails, org names)
+      and collect only public records. No request is sent to the target.
+    broad: run the approved passive collectors and record the query, tool version,
+      timestamp and source URL for every hit.
+    targeted: corroborate each candidate identity or asset with a second independent
+      public source and drop single-source claims.
+    brute: not used; no credential stuffing, no scraping behind authentication and
+      no contact with people or systems.
+    verify: a fresh reviewer re-opens each public source, checks the capture date
+      and separates confirmed facts from inference before reporting.
+  Parallel: passive queries may run in parallel with a per-provider rate limit; no
+  active request to the target is allowed in this suite.
+  Budget: 1 primary, 2 support and 1 fallback card; 15 minutes; provider rate limits.
+  Stop conditions: an identifier is outside scope.md, a source needs authentication
+  or payment, a result contains personal data beyond the approved purpose, an
+  experimental card lacks approval, or the time budget is spent.

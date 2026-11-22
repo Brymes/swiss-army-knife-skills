@@ -1,0 +1,6 @@
+{
+  "schema_version": "1",
+  "runner": "sak-playwright-runner",
+  "ok": false,
+  "error": "the playwright module is not importable from this Node environment"
+}

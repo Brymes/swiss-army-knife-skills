@@ -1,0 +1,385 @@
+prompts:
+  - id: SSRF-01
+    title: Loopback and localhost reachability
+    category: ssrf
+    description: Test whether a server-side fetch can reach the loopback interface or a local-only service.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The app accepts a URL and fetches it, and the fixture exposes a loopback-only endpoint.
+    prompt: |
+      You are an SSRF hunter working only against the authorized host and its local fixture. Your
+      goal is a single, bounded proof that the fetcher can reach loopback.
+
+      Establish the control: request the internal loopback endpoint directly from your client (it
+      may fail by design) and ask the fetcher for a known allowed public or local public URL. Then
+      ask the fetcher for the loopback URL. If it is blocked, try one alternate loopback
+      representation from the payload pack, starting with a wildcard DNS name, then a decimal or
+      abbreviated form.
+
+      Proof is the internal response body, a distinctive internal header, or a timing/error
+      difference that is specific to the internal service. Record the exact URL, status and the
+      minimum body excerpt. Do not scan ports, enumerate internal hosts or contact metadata
+      services.
+
+      Stop at the first internal read. If every representation is blocked, record the validation
+      behavior and stop.
+    inputs: [scope.md, fetch endpoint, loopback-only endpoint, payload pack]
+    mutations:
+      - Fetch the literal loopback URL.
+      - Fetch a wildcard DNS name that resolves to loopback.
+      - Fetch a decimal, octal, hex or abbreviated loopback address.
+      - Fetch a redirect to the loopback URL from an allowed host.
+      - Fetch a URL with userinfo or backslash parser ambiguity.
+    evidence:
+      - Fetch request, status and internal response excerpt.
+      - Blocked literal control and allowed public control.
+      - The validation code or resolver behavior.
+    stop_conditions:
+      - Stop at the first internal read.
+      - Never scan ports or internal ranges.
+      - Never contact a real cloud metadata service.
+      - Stop if the target is not the authorized local fixture.
+    safety:
+      - Active payload; authorized targets only.
+      - Local fixture metadata only, one destination.
+      - Redact any token returned internally.
+    tags: [ssrf, loopback, localhost]
+    source: sak SSRF set
+    notes: Active and authorized-target-only; see knowledge/ssrf/payloads.yaml.
+
+  - id: SSRF-02
+    title: Cloud metadata endpoints
+    category: ssrf
+    description: Determine whether a fetch can reach a cloud instance metadata service and return credentials or identity data.
+    applies_to: [web-app, api, cloud, local-fixture]
+    domains: [web, api, cloud, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The target runs in a cloud environment or the fixture simulates a metadata endpoint.
+    prompt: |
+      You are an SSRF hunter. Your only metadata target is the authorized fixture's simulated
+      metadata endpoint or, with explicit written permission, the target's own metadata service.
+      Never contact a real cloud metadata service on a host you do not own.
+
+      Map the fetcher's reachability first with the loopback card. Then request the metadata base
+      URL through the fetcher and look for identity or token fields. For AWS-style services, the
+      first request may require a token header; note whether the fetcher can set it. For
+      GCP-style services, note the required request header. Do not attempt to use any credential
+      you observe.
+
+      Proof is a metadata response body or a distinctive metadata header, plus the blocked direct
+      control. Record only the field names and a redacted fingerprint, never the credential value.
+
+      Stop immediately after confirming reachability. Do not enumerate instance roles, user data
+      or other metadata paths.
+    inputs: [scope.md, fetch endpoint, simulated metadata endpoint, cloud provider note]
+    mutations:
+      - Fetch the metadata base URL.
+      - Fetch the provider's token or identity path.
+      - Fetch the user-data path only if the fixture simulates it.
+      - Use an alternate IP encoding of the metadata address.
+      - Chain a redirect from an allowed host to metadata.
+    evidence:
+      - Fetch request and redacted metadata field names.
+      - Direct metadata access blocked or unavailable control.
+      - Provider and path tested.
+    stop_conditions:
+      - Stop after confirming reachability; no credential use.
+      - Never contact a real metadata service without written permission.
+      - Do not enumerate roles, tokens or user data.
+      - Stop if the response contains real credentials; report the exposure without copying them.
+    safety:
+      - Active payload; authorized targets only.
+      - Simulated metadata first.
+      - Never print or store credentials.
+    tags: [ssrf, metadata, cloud]
+    source: sak SSRF set
+    notes: Highest-impact SSRF class; strict stop at reachability.
+
+  - id: SSRF-03
+    title: nip.io and sslip.io wildcard DNS
+    category: ssrf
+    description: Bypass a literal loopback blocklist with a wildcard DNS name that resolves to loopback.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The fetcher blocks strings such as 127.0.0.1 or localhost but resolves hostnames before connecting.
+    prompt: |
+      You are an SSRF hunter. A wildcard DNS service maps an address embedded in a hostname to that
+      address, so a substring blocklist that only matches the literal IP is bypassed.
+
+      Confirm offline how the wildcard name maps to loopback, then ask the fetcher for the local
+      fixture's internal endpoint through that name. Use a dash form for IPv4 and the documented
+      IPv6 form for v6. Keep one literal-loopback control that should be blocked.
+
+      Proof is the internal body returned through the wildcard name, plus the blocked literal
+      control. Record the hostname, the resolved address if available, the status and the minimum
+      body excerpt. Do not use a wildcard name that resolves to an external host.
+
+      Stop at the first internal read. If the fetcher resolves and re-validates the final address,
+      record the disproof.
+    inputs: [scope.md, fetch endpoint, loopback-only endpoint, payload pack]
+    mutations:
+      - Fetch the dash-form loopback name.
+      - Fetch the dotted-decimal embedded name.
+      - Fetch an IPv6 wildcard form.
+      - Combine the wildcard name with a redirect.
+      - Use sslip.io as an alternate provider.
+    evidence:
+      - Fetch request and internal response excerpt.
+      - Resolver output captured offline.
+      - Blocked literal control.
+    stop_conditions:
+      - Stop at the first internal read.
+      - Do not contact an external wildcard destination.
+      - Do not scan or enumerate internal ports.
+      - Stop if validation resolves the final address.
+    safety:
+      - Active payload; authorized targets only.
+      - Local fixture metadata only.
+      - Offline resolver evidence preferred.
+    tags: [ssrf, dns, nip.io]
+    source: sak SSRF set
+    notes: See knowledge/ssrf/nip.io.md for the mapping table.
+
+  - id: SSRF-04
+    title: Dash IPv4 and IPv6 notation
+    category: ssrf
+    description: Represent loopback with dash-separated octets or IPv6 forms that a naive validator does not recognize.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The validator recognizes dotted IPv4 only, or the stack accepts unusual IPv6 spellings.
+    prompt: |
+      You are an SSRF hunter. Validators often parse only dotted IPv4 and miss dash notation,
+      IPv4-mapped IPv6, compressed IPv6 and bracketed forms.
+
+      Start with the dash form of loopback in a wildcard hostname, then try bracketed IPv6 and
+      IPv4-mapped IPv6 literals directly. For each, request the authorized loopback endpoint and
+      compare with the blocked dotted control. Keep the request count small and use one destination.
+
+      Proof is the internal response through the alternate notation. Record the exact host form,
+      status and the resolved address if your resolver reports it. Do not test forms that would
+      resolve to an external host.
+
+      Stop at the first accepted notation. If all are rejected, record which parser or normalization
+      step handled them.
+    inputs: [scope.md, fetch endpoint, loopback-only endpoint, payload pack]
+    mutations:
+      - Use dash-separated octets in a wildcard name.
+      - Use a bracketed IPv6 loopback literal.
+      - Use an IPv4-mapped IPv6 literal.
+      - Use a compressed or expanded IPv6 form.
+      - Use an IPv6 literal with a zone identifier only if the fixture documents support.
+    evidence:
+      - Fetch request and internal response excerpt.
+      - Normalized or resolved address.
+      - Blocked dotted control.
+    stop_conditions:
+      - Stop at the first accepted notation.
+      - One internal destination only.
+      - Do not scan IPv6 ranges.
+      - Stop if the form resolves externally.
+    safety:
+      - Active payload; authorized targets only.
+      - Local fixture metadata only.
+      - No network sweeping.
+    tags: [ssrf, ipv6, notation]
+    source: sak SSRF set
+    notes: Bracketed IPv6 literals are frequently missed by regex validators.
+
+  - id: SSRF-05
+    title: Decimal, octal, hex and abbreviated IPs
+    category: ssrf
+    description: Encode loopback as an integer or mixed-radix address that resolves to 127.0.0.1.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The validator compares strings or parses only canonical dotted decimal.
+    prompt: |
+      You are an SSRF hunter. The network stack may accept an address as a 32-bit integer, octal
+      octets, hex octets or a short form such as 127.1 while the validator sees only an opaque
+      string.
+
+      Test one encoding at a time against the authorized loopback endpoint: decimal integer, octal
+      dotted, hex dotted, mixed radix and abbreviated form. Confirm with your resolver that each
+      candidate maps to loopback before sending it. Keep the blocked canonical dotted control.
+
+      Proof is the internal response through an encoded address. Record the exact string and the
+      normalized address. Do not use an encoding that resolves to a non-loopback host.
+
+      Stop at the first accepted encoding. If none work, record the normalization behavior.
+    inputs: [scope.md, fetch endpoint, loopback-only endpoint, payload pack]
+    mutations:
+      - Use the decimal integer form of loopback.
+      - Use octal octets.
+      - Use hex octets.
+      - Use a mixed-radix or shorthand form.
+      - Use an integer form embedded in a wildcard DNS name.
+    evidence:
+      - Fetch request and internal response excerpt.
+      - Normalized address for each candidate.
+      - Blocked canonical control.
+    stop_conditions:
+      - Stop at the first accepted encoding.
+      - Verify every candidate resolves to loopback first.
+      - Do not use an encoding for an external or internal non-authorized host.
+      - Stop if the parser canonicalizes correctly.
+    safety:
+      - Active payload; authorized targets only.
+      - Local fixture metadata only.
+      - No range scanning.
+    tags: [ssrf, ip-encoding, parser]
+    source: sak SSRF set
+    notes: Numeric forms are common in CTFs and still appear in generated validators.
+
+  - id: SSRF-06
+    title: Redirects and scheme-relative hops
+    category: ssrf
+    description: Use an allowed host that redirects to an internal destination, including scheme-relative and multi-hop forms.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The fetcher validates the initial URL only, or follows redirects by default.
+    prompt: |
+      You are an SSRF hunter. A validator that checks only the first URL is bypassed by a 30x from
+      an allowed host to the internal target. Multi-hop and scheme-relative forms defeat shallow
+      hop checks.
+
+      Use an allowed destination you control, such as the fixture's own public redirect route.
+      Request it through the fetcher with a redirect to the authorized loopback endpoint. Observe
+      whether the fetcher follows, how many hops it follows, and whether it re-validates each
+      Location. Try one scheme-relative hop and, only if needed, one two-hop chain.
+
+      Proof is the internal body returned after the redirect, plus a control where the same
+      redirect target is blocked when requested directly. Do not follow a redirect to an external
+      host and do not rely on an open redirect on a third-party site.
+
+      Stop at the first followed redirect that reaches the internal endpoint.
+    inputs: [scope.md, fetch endpoint, allowed redirect route, loopback endpoint]
+    mutations:
+      - Redirect from an allowed host to loopback.
+      - Use a scheme-relative Location.
+      - Use a 307 or 308 to preserve the method.
+      - Use a two-hop chain through an allowed path.
+      - Put the internal URL in a Location header with an encoded path.
+    evidence:
+      - Fetch request, redirect chain and final internal body excerpt.
+      - Direct internal request blocked control.
+      - Redirect handling source or configuration.
+    stop_conditions:
+      - Stop at the first internal read after a redirect.
+      - Do not contact external redirect services.
+      - Limit to two hops.
+      - Stop if the fetcher re-validates every hop.
+    safety:
+      - Active payload; authorized targets only.
+      - Fixture redirect route only.
+      - No external hop.
+    tags: [ssrf, redirect, open-redirect]
+    source: sak SSRF set
+    notes: Redirect handling is the usual bypass when the initial URL is validated.
+
+  - id: SSRF-07
+    title: DNS rebinding and resolution races
+    category: ssrf
+    description: Resolve an allowed name to a public address at validation time and loopback at connect time.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: support
+    intensity: brute
+    when_to_use: The fetcher validates a resolved address and then connects using a second resolution, or caches DNS briefly.
+    prompt: |
+      You are an SSRF hunter. DNS rebinding is a timing and resolver technique: the name answers
+      with an allowed address during validation and a loopback address during the actual connection.
+
+      Prefer a deterministic local simulation the fixture provides. If the fixture does not provide
+      one, do not attempt a live rebinding service against a real host. Confirm the resolver TTL and
+      the number of answers, then make one bounded fetch using a rebinding name that alternates
+      between an allowed address and loopback.
+
+      Proof is the internal body, or a documented sequence showing validation and connection used
+      different answers. Record the resolver output, TTL and timestamps. Stop after one attempt or
+      one short bounded window; never run a continuous rebinding loop.
+
+      If the fetcher pins the validated address or resolves once, record the disproof.
+    inputs: [scope.md, fetch endpoint, local rebinding simulation or resolver notes]
+    mutations:
+      - Use a rebinding name with a zero TTL and two answers.
+      - Alternate answers between allowed and loopback.
+      - Use a resolver that returns answers in rotating order.
+      - Combine rebinding with a short redirect.
+      - Repeat only within the documented bounded window.
+    evidence:
+      - Resolver answers with timestamps and TTL.
+      - Fetch result and internal body excerpt.
+      - The validation and connection code path.
+    stop_conditions:
+      - Stop after one attempt or one bounded window.
+      - Never use a live third-party rebinding service without written permission.
+      - No continuous polling or high-rate queries.
+      - Stop if the fetcher pins the validated address.
+    safety:
+      - Active payload; authorized targets only.
+      - Brute intensity held in reserve; fixture simulation preferred.
+      - No external rebinding infrastructure.
+    tags: [ssrf, dns-rebinding, race]
+    source: sak SSRF set
+    notes: Reserved for a deterministic fixture; do not run live rebinding against third parties.
+
+  - id: SSRF-08
+    title: URL parser tricks, allowlist bypass, protocols and evidence
+    category: ssrf
+    description: Test parser ambiguities and dangerous schemes, then package minimal, reproducible SSRF evidence.
+    applies_to: [web-app, api, local-fixture]
+    domains: [web, api, network]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: A validator uses prefix, suffix or substring checks; or the fetcher accepts non-HTTP schemes.
+    prompt: |
+      You are an SSRF hunter. Parser differences between the validator and the HTTP client create
+      bypasses: userinfo, backslashes, encoded characters, duplicate hosts, trailing dots, a suffix
+      that contains an allowed domain, and unusual schemes.
+
+      Test one ambiguity at a time against the authorized loopback endpoint. Start with a host
+      suffix trick and a userinfo form, then an encoded or backslash form. Separately, ask whether
+      the fetcher accepts file, gopher, dict or ftp; do not send a gopher payload that could speak
+      to an internal service. For file, a read of a known fixture file is enough. Do not use
+      gopher to interact with Redis, SMTP or any stateful service.
+
+      Evidence package: the exact URL, the parser or library version if known, the response status,
+      the minimum body or header proving the internal effect, the blocked control, and a one-line
+      reproduction. Redact tokens and internal paths that are not needed for the proof.
+
+      Stop at the first accepted bypass or dangerous scheme. If the validator normalizes the URL
+      and restricts schemes, record the disproof.
+    inputs: [scope.md, fetch endpoint, loopback endpoint, fixture file, payload pack]
+    mutations:
+      - Use a host suffix that contains an allowed domain.
+      - Use a userinfo form with an allowed-looking host.
+      - Use a backslash or percent-encoded host separator.
+      - Use a trailing dot or duplicate host.
+      - Request a file or gopher scheme only to prove scheme acceptance.
+    evidence:
+      - Exact URL, status and minimal internal effect.
+      - Parser or client library and version.
+      - Blocked control and one-line reproduction.
+      - Redacted token and path list.
+    stop_conditions:
+      - Stop at the first accepted bypass or dangerous scheme.
+      - Never use gopher to talk to Redis, SMTP or another stateful service.
+      - Do not read files outside the fixture's documented test file.
+      - Stop if the fetcher normalizes and restricts correctly.
+    safety:
+      - Active payload; authorized targets only.
+      - No protocol pivoting or internal service interaction.
+      - Minimum file read, redacted evidence.
+    tags: [ssrf, parser, allowlist, protocols, evidence]
+    source: sak SSRF set
+    notes: This is the evidence-standard card for the SSRF family.

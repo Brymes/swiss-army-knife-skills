@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Verbose error leaks a stack trace",
+    "severity": "unknown",
+    "source": "mystery-adapter",
+    "evidence": ["Traceback (most recent call last): fixture"],
+    "extra": {
+      "kept": true
+    }
+  },
+  {
+    "title": "Authenticated probe reached a private page",
+    "severity": "moderate",
+    "source": {
+      "adapter": "mystery"
+    },
+    "target": "https://operator:supersecret@127.0.0.1:8765/private",
+    "evidence": [
+      {
+        "raw": "Authorization: Bearer abcdefghijklmnop"
+      }
+    ]
+  }
+]

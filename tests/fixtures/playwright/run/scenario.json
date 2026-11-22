@@ -1,0 +1,16 @@
+{
+  "name": "fixture-login-check",
+  "viewport": {"width": 1280, "height": 800},
+  "steps": [
+    {"action": "goto", "url": "/login"},
+    {"action": "fill", "selector": "#username", "value": "${PLAYWRIGHT_FIXTURE_USER}"},
+    {"action": "fill", "selector": "#password", "value": "${PLAYWRIGHT_FIXTURE_PASSWORD}"},
+    {"action": "click", "selector": "button[type=submit]"},
+    {"action": "expect_url", "contains": "/index.php"},
+    {"action": "expect_text", "selector": "#welcome", "text": "Welcome"},
+    {"action": "expect_status", "status": 200},
+    {"action": "wait_for", "selector": "#logout"},
+    {"action": "screenshot", "path": "after-login.png", "full_page": true},
+    {"action": "save_storage_state", "path": "storage.json"}
+  ]
+}

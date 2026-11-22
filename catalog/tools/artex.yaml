@@ -1,0 +1,64 @@
+id: artex
+name: ARTEX
+kind: platform
+status: unverified
+description: >-
+  AI autonomous penetration-testing system with a Go backend and Next.js UI: task planning, asset
+  graph, traffic recording, intercept approvals and findings per task.
+license: AGPL-3.0
+homepage: https://github.com/horizonl/ARTEX
+domains:
+  - web
+  - api
+phases:
+  - recon
+  - discovery
+  - exploit
+  - verify
+  - report
+modes:
+  - blackbox
+  - greybox
+intensity: normal
+roles:
+  - support
+  - fallback
+ranking:
+  impact: 5
+  reliability: 3
+  stealth: 2
+  effort: 5
+  noise: 4
+tags:
+  - engine
+  - external
+  - agent
+requires:
+  - docker
+  - docker compose
+install:
+  command: see engines/artex.yaml (external clone under vendor/external/artex)
+  manager: git
+adapter: null
+outputs:
+  - per-task findings and asset graph in the web UI
+  - container logs
+evidence:
+  - runs/<run-id>/logs/
+safety:
+  active: true
+  intrusive: true
+  destructive: false
+  notes: >-
+    AGPL-3.0, external only under the gitignored vendor/external/. UI binds 127.0.0.1:8787. Keep
+    intercept approvals on for state-changing requests, set a real POSTGRES_PASSWORD, and test only
+    authorized targets from scope.md. Provenance is unverified: the mirror is not confirmed against
+    a concrete upstream revision and the install path is not validated.
+sources:
+  - url: https://github.com/horizonl/ARTEX
+    license: AGPL-3.0 per the mirror repository metadata (not verified against a concrete upstream revision)
+    note: english-ui mirror; upstream Autumn-27/ARTEX returned 404 on 2026-11-15. Provenance and installation are unverified; re-check before installing.
+notes: >-
+  Not required for v1 acceptance. Compose bundles PostgreSQL, so a host Postgres is needed only for
+  the local-build path, which stays out of scope. The mirror is not presented as maintained or
+  trusted, and this card does not validate its install path.

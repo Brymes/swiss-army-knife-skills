@@ -1,0 +1,27 @@
+id: fixture-brute
+name: Brute Reserve
+kind: cli
+status: verified
+description: High-impact brute fixture that must stay in the reserve.
+license: MIT
+domains:
+  - web
+phases:
+  - exploit
+modes:
+  - blackbox
+intensity: brute
+roles:
+  - brute
+ranking:
+  impact: 5
+  reliability: 2
+  stealth: 1
+  effort: 4
+  noise: 5
+requires:
+  - python3
+safety:
+  active: true
+  intrusive: true
+  notes: Fixture only; reserved, never primary.

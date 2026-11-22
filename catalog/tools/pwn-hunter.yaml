@@ -1,0 +1,57 @@
+id: pwn-hunter
+name: PWN HUNTER
+kind: skill
+status: verified
+description: Vendored MIT agent skill for authorized binary exploitation; triage, primitive ladder, ret2libc/SROP/format-string/heap/seccomp/kernel technique prompts, and a measured exp.py deliverable.
+homepage: https://github.com/BountyForge-xyz/pwn-skill
+license: MIT
+version: commit-403310598eab3c99c24082795c35b76e790ed6a5
+domains:
+  - binary
+phases:
+  - exploit
+  - verify
+modes:
+  - binary
+intensity: normal
+roles:
+  - support
+ranking:
+  impact: 5
+  reliability: 3
+  stealth: 4
+  effort: 4
+  noise: 2
+requires:
+  - pwntools
+install:
+  command: sh install.sh
+  notes: install.sh links vendor/skills/pwn-hunter/ as .opencode/skills/pwn-hunter (or ~/.agents/skills/pwn-hunter). Host tools are not installed by sak; see `sak doctor`.
+run:
+  command: SKILL.md
+  notes: Loaded by an agent when the task matches the skill description; no executable entry point.
+adapter: null
+safety:
+  active: true
+  intrusive: true
+  destructive: false
+  notes: Authorized lab/CTF binaries only; local targets only in sak v1. No destructive payloads.
+sources:
+  - url: https://github.com/BountyForge-xyz/pwn-skill
+    license: MIT
+    note: Pinned at commit 403310598eab3c99c24082795c35b76e790ed6a5 on main, fetched 2026-11-15; vendored unmodified.
+tags:
+  - skill
+  - binary
+  - exploit-development
+  - pwn
+  - rop
+notes: |
+  invoke.type: skill
+  local_path: vendor/skills/pwn-hunter
+  commit: 403310598eab3c99c24082795c35b76e790ed6a5
+  upstream_modified: false
+  provenance: vendor/PROVENANCE.md and vendor/sources.lock.json
+  strengths: Primitive-driven loop (crash, RIP, leak, write, exec) with concrete triage commands; covers stack, format string, heap, seccomp and kernel paths; demands measured offsets and a working exp.py instead of prose.
+  weaknesses: Needs pwntools and a debugger; technique text assumes amd64/glibc or Linux kernel labs; no built-in target acquisition or reporting, so T4 owns engagement context and evidence.
+  integration: T4 delegates binary work to this skill and records the primitive, offset and observed result as evidence.

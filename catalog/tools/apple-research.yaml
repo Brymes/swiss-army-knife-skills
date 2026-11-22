@@ -1,0 +1,52 @@
+id: apple-research
+name: AppleResearch
+kind: reference
+status: unverified
+description: >-
+  A public dump of macOS security-research notes and proof-of-concept material by dawgyg. Useful
+  for macOS and binary-adjacent reading, not a tool and not an executable step.
+license: none declared (no LICENSE file upstream)
+homepage: https://github.com/dawgyg/AppleResearch
+domains:
+  - macos
+  - binary
+phases:
+  - recon
+  - exploit
+modes:
+  - passive
+  - source
+intensity: passive
+roles:
+  - triage
+ranking:
+  impact: 3
+  reliability: 3
+  stealth: 5
+  effort: 2
+  noise: 1
+tags:
+  - reference
+  - external
+  - macos
+requires: []
+install:
+  notes: "Reference only: no install command, and no code is copied or executed."
+adapter: null
+outputs:
+  - reading notes and references only
+safety:
+  active: false
+  intrusive: false
+  destructive: false
+  notes: >-
+    No LICENSE file is visible upstream, so the license is unestablished metadata. Project policy
+    keeps it reference-only: no code is copied, vendored or
+    executed from this repository. Read it, cite it, and reimplement independently if needed.
+sources:
+  - url: https://github.com/dawgyg/AppleResearch
+    license: none declared
+    note: No LICENSE file at review time; reference-only decision in docs/source-decisions.md.
+notes: >-
+  v1 focuses on web/API and source-code assessment; macOS and binary material is catalogued as a
+  reference, not executed.

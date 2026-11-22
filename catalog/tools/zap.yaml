@@ -1,0 +1,66 @@
+id: zap
+name: OWASP ZAP
+kind: platform
+status: verified
+description: >-
+  OWASP Zed Attack Proxy: an intercepting proxy and DAST scanner. The baseline and API scans give a
+  broad, repeatable second opinion after the targeted probes.
+license: Apache-2.0
+homepage: https://www.zaproxy.org/
+domains:
+  - web
+  - api
+phases:
+  - scan
+  - verify
+modes:
+  - blackbox
+  - greybox
+intensity: normal
+roles:
+  - primary
+  - support
+  - evidence
+ranking:
+  impact: 4
+  reliability: 4
+  stealth: 3
+  effort: 3
+  noise: 3
+tags:
+  - dast
+  - proxy
+requires:
+  - zap.sh
+install:
+  command: brew install --cask zap
+  manager: brew
+run:
+  command: zap.sh
+  args:
+    - -cmd
+    - -quickurl
+    - "{target}"
+    - -quickout
+    - "{output}/zap.json"
+    - -quickprogress
+adapter: null
+outputs:
+  - JSON or HTML scan report
+evidence:
+  - the alert's request/response plus a manual replay and a negative control
+safety:
+  active: true
+  intrusive: true
+  destructive: false
+  notes: >-
+    Active scan rules can modify state. Use the baseline/passive scan first, cap the scan policy, and
+    only enable active rules for in-scope hosts. `zap.sh` comes from the desktop cask; the official
+    container image ghcr.io/zaproxy/zaproxy is an alternative when Docker is present.
+sources:
+  - url: https://github.com/zaproxy/zaproxy
+    license: Apache-2.0
+    note: Core project; add-ons carry their own licenses.
+notes: >-
+  Requires the `zap.sh` launcher, which the Docker-only path does not provide; install the cask or
+  add the container's script to PATH if you automate through Docker.

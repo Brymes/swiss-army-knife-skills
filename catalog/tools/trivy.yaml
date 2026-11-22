@@ -1,0 +1,66 @@
+id: trivy
+name: Trivy
+kind: cli
+status: verified
+description: >-
+  Dependency, container-image, configuration and SBOM scanner. Covers vulnerable packages and weak
+  IaC defaults that a pattern-based SAST tool does not.
+license: Apache-2.0
+homepage: https://trivy.dev/
+domains:
+  - source
+  - cloud
+phases:
+  - scan
+  - verify
+modes:
+  - source
+  - whitebox
+intensity: normal
+roles:
+  - support
+  - triage
+ranking:
+  impact: 4
+  reliability: 4
+  stealth: 4
+  effort: 2
+  noise: 2
+tags:
+  - sca
+  - containers
+  - sbom
+requires:
+  - trivy
+install:
+  command: brew install trivy
+  manager: brew
+run:
+  command: trivy
+  args:
+    - fs
+    - --format
+    - json
+    - --output
+    - "{output}/trivy.json"
+    - --scanners
+    - vuln,secret,misconfig
+    - "{target}"
+adapter: null
+outputs:
+  - JSON vulnerability, secret and misconfiguration report
+evidence:
+  - package name and version, advisory ID, and the code path that loads the package
+safety:
+  active: false
+  intrusive: false
+  destructive: false
+  notes: >-
+    Reads local files and downloads its own advisory database. A vulnerable dependency is not a
+    finding until the application actually loads it on an attacker-reachable path.
+sources:
+  - url: https://github.com/aquasecurity/trivy
+    license: Apache-2.0
+notes: >-
+  Pair the report with a reachability check; dependency-only claims are the most common false
+  positive in this catalog.

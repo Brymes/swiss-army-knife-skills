@@ -1,0 +1,8 @@
+[
+  {
+    "title": "Valid first candidate",
+    "severity": "low",
+    "target": "http://127.0.0.1:8765/first"
+  },
+  7
+]

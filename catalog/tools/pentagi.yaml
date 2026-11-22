@@ -1,0 +1,66 @@
+id: pentagi
+name: PentAGI
+kind: platform
+status: unverified
+description: >-
+  Self-hosted autonomous penetration-testing system. A team of LLM agents plans and runs recon and
+  exploitation tooling inside disposable Docker sandboxes, with a web UI, pgvector knowledge store
+  and flow history.
+license: MIT
+homepage: https://pentagi.com
+domains:
+  - web
+  - api
+phases:
+  - recon
+  - discovery
+  - scan
+  - exploit
+  - verify
+modes:
+  - blackbox
+  - greybox
+intensity: normal
+roles:
+  - support
+  - fallback
+ranking:
+  impact: 5
+  reliability: 3
+  stealth: 2
+  effort: 5
+  noise: 4
+tags:
+  - engine
+  - external
+  - agent
+requires:
+  - docker
+  - docker compose
+install:
+  command: see engines/pentagi.yaml (external clone under vendor/external/pentagi)
+  manager: git
+adapter: null
+outputs:
+  - flow history in the web UI
+  - container logs
+evidence:
+  - runs/<run-id>/logs/
+safety:
+  active: true
+  intrusive: true
+  destructive: false
+  notes: >-
+    Optional external engine, cloned to vendor/external/pentagi and never vendored. Publishes
+    127.0.0.1:8443 only; sandbox flows publish host ports from DOCKER_PORTS_BASE (default 28000).
+    Authorized targets in scope.md only. Never expose it.
+sources:
+  - url: https://github.com/vxcontrol/pentagi
+    license: MIT
+    note: Source is MIT; the repository also ships an EULA.md that governs images and UI use.
+  - url: https://pentagi.com
+    license: MIT
+    note: Project site and documentation.
+notes: >-
+  Not required for v1 acceptance. Ranked below hand-driven tools because a full flow costs model
+  tokens, several containers and many minutes, and its output still needs human triage.

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "../../escape",
+    "title": "Escaped identifier candidate",
+    "severity": "low",
+    "source": "mystery-adapter",
+    "target": "http://127.0.0.1:8765/../../etc/passwd",
+    "evidence": {
+      "path": "../../etc/passwd",
+      "note": "Candidate supplied paths are data only and are never opened."
+    }
+  }
+]

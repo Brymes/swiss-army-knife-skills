@@ -1,0 +1,62 @@
+id: security-audit
+name: security-audit
+kind: skill
+status: verified
+description: Vendored MIT Cloudflare agent skill for source-first security audits; six-phase coverage-led workflow with adversarial validation, findings.json schema, independent record verification and target-neutral reporting.
+homepage: https://github.com/cloudflare/security-audit-skill
+license: MIT
+version: commit-c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
+domains:
+  - source
+  - api
+  - web
+phases:
+  - recon
+  - discovery
+  - verify
+  - report
+modes:
+  - source
+  - whitebox
+intensity: passive
+roles:
+  - triage
+ranking:
+  impact: 5
+  reliability: 4
+  stealth: 5
+  effort: 4
+  noise: 1
+requires:
+  - node
+install:
+  command: sh install.sh
+  notes: install.sh links vendor/skills/security-audit/ as .opencode/skills/security-audit (or ~/.agents/skills/security-audit). Node.js runs the bundled zero-dependency validators.
+run:
+  command: SKILL.md
+  notes: Loaded by an agent when a codebase audit or vulnerability review is requested; no executable entry point.
+adapter: null
+safety:
+  active: false
+  intrusive: false
+  destructive: false
+  notes: Source-first and read-only by default; target-controlled execution only inside an OS-enforced sandbox, never against live external targets.
+sources:
+  - url: https://github.com/cloudflare/security-audit-skill
+    license: MIT
+    note: Pinned at commit c1c8a8c1471069fb0e188eeaff69b8e8db6564a8 on main, fetched 2026-11-15; vendored unmodified from skills/security-audit.
+tags:
+  - skill
+  - source-audit
+  - code-review
+  - vulnerability-hunting
+  - validation
+notes: |
+  invoke.type: skill
+  local_path: vendor/skills/security-audit
+  commit: c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
+  upstream_modified: false
+  provenance: vendor/PROVENANCE.md and vendor/sources.lock.json
+  strengths: Coverage ledger plus isolated hunters and adversarial verifiers; the confirmed/needs_validation/rejected split matches the sak findings model; ships report-schema.json and two zero-dependency validators with tests.
+  weaknesses: Spawns many sub-agents, so it is token- and time-expensive; needs Node.js for validators and an OS-enforced sandbox before any target code runs; its default output directory is outside the repository, which T10 must document.
+  integration: T4 delegates source audits to this skill, passes scope/target/budget, and maps its verified records into the sak findings model and report.

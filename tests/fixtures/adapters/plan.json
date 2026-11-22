@@ -1,0 +1,68 @@
+{
+  "run_id": "fixture-adapter-test",
+  "generated_at": "2026-11-15T12:00:00+00:00",
+  "target": "http://localhost:8765",
+  "suite": {
+    "id": "web-blackbox",
+    "name": "Fixture web black-box",
+    "profile": "web-blackbox",
+    "budget": {"primary": 1, "support": 1, "fallback": 1, "brute": 0}
+  },
+  "filters": {},
+  "allow_missing_requires": true,
+  "candidates": [
+    {
+      "id": "nuclei",
+      "name": "Nuclei",
+      "kind": "cli",
+      "status": "verified",
+      "domains": ["web", "api"],
+      "intensity": "normal",
+      "role": "primary",
+      "score": 10,
+      "formula": "2*impact + reliability + stealth - effort - noise",
+      "breakdown": {"impact": 5, "reliability": 5, "stealth": 2, "effort": 2, "noise": 4},
+      "requires": ["nuclei"],
+      "adapter": "nuclei",
+      "options": {"severity": "high,critical", "rate_limit": 5, "timeout": 5, "retries": 1}
+    },
+    {
+      "id": "blackbird",
+      "name": "Blackbird",
+      "kind": "cli",
+      "status": "verified",
+      "domains": ["web", "osint"],
+      "intensity": "normal",
+      "role": "support",
+      "score": 6,
+      "formula": "2*impact + reliability + stealth - effort - noise",
+      "breakdown": {"impact": 3, "reliability": 3, "stealth": 3, "effort": 3, "noise": 3},
+      "requires": ["git", "python3"],
+      "adapter": "blackbird",
+      "options": {"username": "fixtureuser", "sites": 5}
+    },
+    {
+      "id": "webseek",
+      "name": "Webseek",
+      "kind": "cli",
+      "status": "experimental",
+      "domains": ["osint", "web"],
+      "intensity": "passive",
+      "role": "fallback",
+      "score": 9,
+      "formula": "2*impact + reliability + stealth - effort - noise",
+      "breakdown": {"impact": 2, "reliability": 3, "stealth": 5, "effort": 2, "noise": 1},
+      "requires": ["npx"],
+      "adapter": "webseek",
+      "options": {"query": "fixture query", "max_results": 3, "provider": "fixture-provider"}
+    }
+  ],
+  "roles": {"primary": ["nuclei"], "support": ["blackbird"], "fallback": ["webseek"], "brute": []},
+  "waves": [
+    {"wave": 1, "role": "primary", "ids": ["nuclei"]},
+    {"wave": 2, "role": "support", "ids": ["blackbird"]},
+    {"wave": 3, "role": "fallback", "ids": ["webseek"]}
+  ],
+  "excluded": [],
+  "plan_path": null
+}

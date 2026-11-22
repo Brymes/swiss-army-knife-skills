@@ -1,0 +1,46 @@
+id: binary
+name: Binary triage
+description: Authorized local binary and memory-corruption triage in a lab; triage protections, reproduce a crash and keep the proof minimal.
+profile: binary
+domains:
+  - binary
+filters:
+  kinds:
+    - skill
+  statuses:
+    - verified
+  domains:
+    - binary
+  modes:
+    - binary
+include:
+  tools:
+    - pwn-hunter
+budget:
+  primary: 1
+  support: 1
+  fallback: 0
+  brute: 0
+targets:
+  scope_required: true
+notes: |
+  Roles: the pwn-hunter skill is primary triage, a manual debugger session is
+  support, and fallback and brute stay closed because a lab binary has one
+  controlled path.
+  Waves:
+    passive: hash and identify the binary, record architecture, protections and
+      input format, and check that the sample is inside scope.md. No execution.
+    broad: triage with checksec and read-only disassembly; classify candidate
+      primitives without sending malformed input.
+    targeted: reproduce one crash with the smallest input, identify the offset and
+      primitive, and keep the core dump and command line as evidence.
+    brute: not used; no fuzzing campaign, no denial-of-service input and no
+      exploit against any host.
+    verify: rerun the minimal input in a clean process, confirm the offset and
+      primitive, and record the observed effect rather than an intended exploit.
+  Parallel: static triage may run in parallel; every execution of the sample is
+  serialized and confined to the authorized lab directory.
+  Budget: 1 primary and 1 support card; 20 minutes; no network.
+  Stop conditions: the sample is outside scope.md or not owned by the requester, a
+  step needs network access, the primitive is unreproducible, or the time budget
+  is spent. Missing pwntools is an install hint, not a reason to install globally.

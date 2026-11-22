@@ -1,0 +1,2 @@
+{"template-id":"fixture-sqli","info":{"name":"Fixture SQL injection","severity":"high","tags":["sqli","fixture"]},"type":"http","host":"localhost:8765","matched-at":"http://localhost:8765/search?q=1","matcher-name":"error","extracted-results":["SQL syntax"]}
+{"template-id":"fixture-headers","info":{"name":"Missing security headers","severity":"low","tags":["headers","fixture"]},"type":"http","host":"localhost:8765","matched-at":"http://localhost:8765/","matcher-name":"absent"}

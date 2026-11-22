@@ -1,0 +1,39 @@
+{
+  "run_id": "fixture-playwright-test",
+  "generated_at": "2026-11-15T12:00:00+00:00",
+  "target": "http://localhost:8765",
+  "suite": {
+    "id": "web-blackbox",
+    "name": "Fixture web black-box",
+    "profile": "web-blackbox",
+    "budget": {"primary": 0, "support": 1, "fallback": 0, "brute": 0}
+  },
+  "filters": {},
+  "allow_missing_requires": true,
+  "candidates": [
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "kind": "cli",
+      "status": "verified",
+      "domains": ["web", "api"],
+      "intensity": "normal",
+      "role": "support",
+      "score": 8,
+      "formula": "2*impact + reliability + stealth - effort - noise",
+      "breakdown": {"impact": 3, "reliability": 4, "stealth": 4, "effort": 2, "noise": 2},
+      "requires": ["node", "npx"],
+      "adapter": "playwright",
+      "options": {
+        "scenario": "scenario.json",
+        "timeout_seconds": 30,
+        "browser": "chromium",
+        "headed": false
+      }
+    }
+  ],
+  "roles": {"primary": [], "support": ["playwright"], "fallback": [], "brute": []},
+  "waves": [{"wave": 1, "role": "support", "ids": ["playwright"]}],
+  "excluded": [],
+  "plan_path": null
+}

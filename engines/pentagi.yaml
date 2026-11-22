@@ -1,0 +1,61 @@
+id: pentagi
+name: PentAGI
+description: >-
+  Self-hosted autonomous penetration-testing system: a Go backend, React UI and a team of LLM
+  agents that plan and run recon and exploitation tools in disposable Docker sandboxes.
+status: unverified
+license: MIT
+homepage: https://pentagi.com
+source: https://github.com/vxcontrol/pentagi
+requirements:
+  - docker
+  - docker compose
+commands:
+  install:
+    - git clone --depth 1 https://github.com/vxcontrol/pentagi.git vendor/external/pentagi
+    - cp vendor/external/pentagi/.env.example vendor/external/pentagi/.env
+  up:
+    - cd vendor/external/pentagi && docker compose up -d
+  down:
+    - cd vendor/external/pentagi && docker compose down
+  status:
+    - curl -ksSf -o /dev/null https://127.0.0.1:8443/ && echo up
+  doctor:
+    - docker version
+    - docker compose version
+ports:
+  - 8443
+  - 28000
+data_paths:
+  - vendor/external/pentagi
+  - vendor/external/pentagi/data
+models:
+  - OpenAI, Anthropic, Gemini, Bedrock, DeepSeek, GLM, Kimi, Qwen, MiniMax, Mistral or xAI keys
+  - Ollama or another OpenAI-compatible local endpoint
+  - embeddings provider for the pgvector knowledge store
+safety:
+  active: true
+  external: true
+  notes: >-
+    MIT source, but the compose stack pulls prebuilt images and runs exploit tooling inside
+    containers. Clone it under vendor/external/pentagi; nothing is vendored. Keep it local: compose
+    publishes 127.0.0.1:8443 only. Sandbox flows publish host ports from DOCKER_PORTS_BASE (default
+    28000). Never expose it to a public interface and never give it a target outside scope.md. The
+    repository also ships an EULA.md that governs use of the images and the UI; read it before
+    handing it to a third party.
+refusal:
+  missing_runtime: >-
+    Refused: PentAGI needs the docker CLI and the docker compose plugin. The bundled pgvector
+    PostgreSQL, scraper and worker all run as compose services, so a host Postgres is not required.
+  missing_key: >-
+    Refused on start without at least one LLM provider key or a reachable local endpoint: set
+    OPEN_AI_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OLLAMA_SERVER_URL or LLM_SERVER_URL in
+    vendor/external/pentagi/.env. sak never reads or writes those values.
+  message: >-
+    Exit 2 with the missing requirement and its hint before any clone, compose up or port bind.
+notes: >-
+  Standard path: clone, copy .env.example to .env, choose a provider, then compose up. The UI is
+  https on 127.0.0.1:8443 with a self-signed certificate, hence `curl -k` in the status check.
+  Optional overlays (graphiti memory, langfuse, observability) are separate compose files and stay
+  out of scope for v1. Docker Desktop, OrbStack or a Linux Docker host all work; Apple `container`
+  does not support Compose.

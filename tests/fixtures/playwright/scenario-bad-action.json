@@ -1,0 +1,7 @@
+{
+  "name": "unsupported-action",
+  "steps": [
+    {"action": "goto", "url": "/"},
+    {"action": "upload", "selector": "#file", "value": "/etc/passwd"}
+  ]
+}

@@ -1,0 +1,21 @@
+id: source-review
+name: Fixture source review
+description: Offline fixture suite for source-domain card selection.
+profile: web-source
+domains:
+  - source
+filters:
+  statuses:
+    - verified
+  domains:
+    - source
+  modes:
+    - source
+include:
+  tools:
+    - fixture-source-only
+budget:
+  primary: 1
+  support: 0
+  fallback: 0
+  brute: 0

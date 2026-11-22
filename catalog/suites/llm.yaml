@@ -1,0 +1,68 @@
+id: llm
+name: LLM application
+description: Authorized assessment of an LLM-backed feature; prompt-driven hunters lead, with web scanners supporting transport and authorization checks.
+profile: custom
+domains:
+  - llm
+  - web
+  - api
+filters:
+  kinds:
+    - cli
+    - platform
+  statuses:
+    - verified
+  domains:
+    - llm
+    - web
+    - api
+  modes:
+    - blackbox
+include:
+  prompts:
+    - LLM-01
+    - LLM-02
+    - LLM-03
+    - LLM-04
+    - LLM-05
+    - LLM-06
+    - LLM-07
+    - LLM-08
+    - INV-03
+    - INV-07
+    - VIBE-06
+    - VIBE-14
+    - VER-01
+    - REP-01
+budget:
+  primary: 2
+  support: 3
+  fallback: 2
+  brute: 0
+targets:
+  scope_required: true
+notes: |
+  Roles: primary is the LLM prompt set plus the best-ranked HTTP surface check,
+  support adds authorization, quota and output-encoding checks, fallback is manual
+  replay, and brute is closed because prompt volume is not a substitute for a
+  hypothesis.
+  Waves:
+    passive: read the threat model and the model/tool configuration; enumerate
+      prompts, uploads, retrieval corpora, tool calls and output sinks without
+      sending a message.
+    broad: primary hunters test prompt injection, retrieval leakage, tool-call
+      authorization, system-prompt exposure and output encoding with benign
+      payloads and a paired control.
+    targeted: replay the cheapest failing prompt against the exact feature and
+      principal, then try one cross-principal variant to test tenant isolation.
+    brute: not used; no unbounded prompt spam, no token-exhaustion or cost attack.
+    verify: a fresh verifier repeats the prompt with a different account and a
+      benign control, checks whether the output crossed the intended boundary, and
+      confirms only reproducible data exposure.
+  Parallel: independent read-only prompts may run in parallel against separate
+  accounts; any tool call that writes, spends or messages is serialized.
+  Budget: 2 primary, 3 support and 2 fallback cards; 15 minutes; a hard token and
+  cost cap recorded in scope.md.
+  Stop conditions: the model endpoint or account is out of scope, a prompt would
+  spend real money or message a real person, the token/cost cap is reached, an
+  output contains real personal data, or two waves add no new boundary crossing.

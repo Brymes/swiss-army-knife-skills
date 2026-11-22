@@ -1,0 +1,67 @@
+id: ffuf
+name: ffuf
+kind: cli
+status: verified
+description: >-
+  Fast Go web fuzzer. Used for content and parameter discovery with a wordlist, or for a bounded
+  virtual-host sweep, and it emits JSON for evidence.
+license: MIT
+homepage: https://github.com/ffuf/ffuf
+domains:
+  - web
+  - api
+phases:
+  - discovery
+modes:
+  - blackbox
+intensity: brute
+roles:
+  - brute
+  - support
+ranking:
+  impact: 4
+  reliability: 4
+  stealth: 2
+  effort: 3
+  noise: 4
+tags:
+  - reserved
+  - fuzzing
+requires:
+  - ffuf
+install:
+  command: go install github.com/ffuf/ffuf/v2@latest
+  manager: go
+run:
+  command: ffuf
+  args:
+    - -u
+    - "{target}/FUZZ"
+    - -w
+    - "{wordlist}"
+    - -mc
+    - "200,204,301,302,401,403"
+    - -rate
+    - "{rate}"
+    - -of
+    - json
+    - -o
+    - "{output}/ffuf.json"
+adapter: null
+outputs:
+  - JSON result file
+evidence:
+  - raw JSON plus a control request for an absent path
+safety:
+  active: true
+  intrusive: false
+  destructive: false
+  notes: >-
+    Brute reserve: never promoted to primary. Cap `-rate`, keep wordlists small, and never point a
+    fuzz run at a target outside scope.md. Default match codes exclude 500s to reduce noise.
+sources:
+  - url: https://github.com/ffuf/ffuf
+    license: MIT
+notes: >-
+  In reserve because volume is the point; a plan uses it after targeted probes have narrowed the
+  surface.

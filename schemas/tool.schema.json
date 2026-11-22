@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/tool.schema.json",
+  "title": "sak tool card",
+  "description": "A tool, platform, service, skill or reference in the sak catalog. Only verified cards are eligible for automatic planning.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "kind",
+    "status",
+    "description",
+    "domains",
+    "phases",
+    "intensity",
+    "ranking"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Stable lowercase identifier; unique across the catalog."
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "enum": ["skill", "cli", "platform", "service", "reference", "mcp"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "unverified", "experimental", "deprecated"],
+      "description": "Only verified cards are auto-planned by default."
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "homepage": { "type": "string", "minLength": 1 },
+    "license": { "type": "string", "minLength": 1 },
+    "version": { "type": "string" },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["web", "api", "source", "binary", "cloud", "osint", "macos", "llm", "network", "mobile"]
+      }
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["recon", "discovery", "scan", "exploit", "post", "verify", "report", "setup"]
+      }
+    },
+    "modes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["blackbox", "greybox", "whitebox", "source", "binary", "passive"]
+      },
+      "description": "Engagement modes this card is suitable for. Absent means any mode."
+    },
+    "intensity": {
+      "type": "string",
+      "enum": ["passive", "normal", "brute"],
+      "description": "brute cards are held in reserve and never promoted to primary."
+    },
+    "roles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["primary", "support", "fallback", "brute", "triage", "evidence"]
+      }
+    },
+    "ranking": { "$ref": "#/$defs/ranking" },
+    "tags": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "requires": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Runtimes, executables, python modules or ENV_VARS needed at run time."
+    },
+    "install": { "$ref": "#/$defs/command" },
+    "run": { "$ref": "#/$defs/command" },
+    "adapter": {
+      "type": ["string", "null"],
+      "description": "Adapter module name when the card is executable through sak run."
+    },
+    "outputs": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "evidence": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "safety": { "$ref": "#/$defs/safety" },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string", "minLength": 1 },
+          "license": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "ranking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impact", "reliability", "stealth", "effort", "noise"],
+      "description": "Integer scores 1-5. score = 2*impact + reliability + stealth - effort - noise.",
+      "properties": {
+        "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "reliability": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "stealth": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "effort": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "noise": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "command": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "command": { "type": "string", "minLength": 1 },
+            "args": { "type": "array", "items": { "type": "string" } },
+            "url": { "type": "string", "minLength": 1 },
+            "manager": { "type": "string", "minLength": 1 },
+            "notes": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "active": { "type": "boolean" },
+        "intrusive": { "type": "boolean" },
+        "destructive": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

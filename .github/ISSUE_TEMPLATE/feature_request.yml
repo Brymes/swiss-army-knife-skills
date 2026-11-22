@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a card, adapter, harness integration or workflow change
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep proposals harness-neutral and provider-neutral where possible. A new
+        live integration needs a documented scope and an offline test.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - catalog card / schema
+        - planner / prompt card
+        - hunt / model runner
+        - exploit / verify / report
+        - skill / harness / MCP
+        - docs / benchmark
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should change, and what stays the same?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and evidence
+      description: Scope, execution mode, secret handling, tests and expected evidence
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The proposal works without a model or paid API, unless it is explicitly a model feature.
+          required: true
+        - label: It can be tested offline or on a loopback lab.
+          required: true
+        - label: It does not require a GPL/AGPL/unlicensed dependency.
+          required: true

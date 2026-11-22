@@ -1,0 +1,66 @@
+id: web-source
+name: Web source review
+description: White-box source and configuration review for a web or API repository; find reachable vulnerable paths in code, then confirm with a runtime or test replay.
+profile: web-source
+domains:
+  - source
+  - web
+  - api
+filters:
+  kinds:
+    - skill
+    - cli
+  statuses:
+    - verified
+  domains:
+    - source
+  modes:
+    - source
+    - whitebox
+include:
+  prompts:
+    - INV-01
+    - INV-02
+    - INV-03
+    - INV-04
+    - INV-05
+    - INV-06
+    - INV-07
+    - INV-08
+    - INV-09
+    - INV-10
+    - INV-11
+    - INV-12
+    - INV-13
+    - LLM-08
+    - MUT-01
+    - VER-01
+    - REP-01
+budget:
+  primary: 3
+  support: 3
+  fallback: 2
+  brute: 0
+targets:
+  scope_required: true
+notes: |
+  Roles: primary reviews the source tree (SAST, secret scanning, the security-audit
+  skill), support adds dependency and container checks, fallback is a manual
+  read-only review, brute is closed because source review has no brute phase.
+  Waves:
+    passive: index the repository, list entry points, trust boundaries and data
+      stores, and read the threat model. No execution and no network.
+    broad: primary scanners and the security-audit skill cover the tree; every
+      candidate keeps a pinned file, line and reachable call path.
+    targeted: trace each candidate from an untrusted entry point to the sink,
+      check the guard that is supposed to stop it, and run the smallest local
+      test or replay that proves or disproves reachability.
+    brute: not used; source review is bounded by the tree, not by payload volume.
+    verify: a fresh reviewer re-reads the cited path and tries to find the missing
+      guard or a second caller that disproves the claim before confirming.
+  Parallel: file reads, SAST and dependency scans run in parallel; local tests that
+  write files or start services are serialized.
+  Budget: 3 primary, 3 support and 2 fallback cards; 20 minutes; no network.
+  Stop conditions: the repository path is outside scope.md, a scan needs the
+  network, a candidate has no pinned source location, the time budget is spent, or
+  two waves add no new reachable path.

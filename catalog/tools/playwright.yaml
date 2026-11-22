@@ -1,0 +1,81 @@
+id: playwright
+name: Playwright
+kind: cli
+status: verified
+description: >-
+  Browser automation used to verify what a browser actually does: redirects, CORS and CSP
+  behaviour, storage, and authenticated multi-user flows that curl cannot reproduce. The sak
+  adapter runs a declared scenario through `adapters/playwright/runner.mjs` and normalizes
+  failed expectations, error responses and console errors into candidate findings.
+license: Apache-2.0
+homepage: https://playwright.dev/
+version: ">=1.40"
+domains:
+  - web
+  - api
+phases:
+  - recon
+  - verify
+modes:
+  - blackbox
+  - greybox
+intensity: normal
+roles:
+  - support
+  - evidence
+ranking:
+  impact: 3
+  reliability: 4
+  stealth: 4
+  effort: 2
+  noise: 2
+tags:
+  - browser
+  - verification
+  - playwright
+  - login
+  - cookies
+requires:
+  - node
+  - npx
+install:
+  command: npm install --global playwright
+  manager: npm
+  notes: >-
+    Download the browser once with `npx playwright install chromium`. Browser binaries stay in
+    the operator's Playwright cache and are never committed or vendored by sak.
+run:
+  command: sak run --run RUN_DIR --step playwright --dry-run
+  notes: >-
+    The step sets options.scenario to a scenario JSON path relative to the run directory, with
+    optional options.timeout_seconds (default 60), options.browser (default chromium) and
+    options.headed (default false). Dry run by default; --execute needs scope.md, a planned
+    step and Node, npx, the runner and a cached Chromium browser.
+adapter: playwright
+outputs:
+  - JSON result document with per-step status, URL, title, HTTP status, selected text, cookie
+    names and flags, console errors and candidate observations
+  - screenshots and an optional Playwright storage-state file under the run directory
+evidence:
+  - screenshot or storage-state path showing the browser-observed state
+  - per-step result document with status codes and redacted console errors
+safety:
+  active: true
+  intrusive: false
+  destructive: false
+  notes: >-
+    Drives the authorized host only. The runner refuses navigation outside the plan target's
+    origin, records cookie names rather than values, never follows a download or proxy action,
+    and redacts substituted credentials. Do not commit downloaded browser binaries, result
+    documents or traces that contain cookies or tokens; keep run artifacts under runs/ and
+    keep storage-state files at mode 0600.
+sources:
+  - url: https://github.com/microsoft/playwright
+    license: Apache-2.0
+    note: Browser binaries are downloaded at install time, not vendored here.
+notes: >-
+  The strongest evidence source for client-side claims, because it shows the browser's own
+  behaviour rather than a proxy's interpretation. A browser check proves what the browser did,
+  not that the behaviour is exploitable: parsed candidates stay needs_validation until an
+  operator confirms impact. Parser: adapters/playwright.py (parse), runner:
+  adapters/playwright/runner.mjs, scenario contract: adapters/playwright/README.md.

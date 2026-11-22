@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""Deterministic fake hunter for ``tests/test_hunt.py``.
+
+The first argument (or ``FAKE_HUNT_MODE``) selects a scenario.  The prompt is
+the last argument, matching ``sak hunt``'s runner contract, so the tests can
+assert the bounded-hunter context.  Optional
+``FAKE_HUNT_LOG`` appends ``start``/``end`` lines for concurrency checks and
+``FAKE_HUNT_PROMPT_DIR`` saves the received prompt.  No network or model is used.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+
+
+def log(kind: str) -> None:
+    path = os.environ.get("FAKE_HUNT_LOG")
+    if not path:
+        return
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(f"{kind} {os.getpid()} {time.time():.6f}\n")
+
+
+def save_prompt(prompt: str) -> None:
+    directory = os.environ.get("FAKE_HUNT_PROMPT_DIR")
+    if not directory:
+        return
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, f"prompt-{os.getpid()}.txt"), "w", encoding="utf-8") as handle:
+        handle.write(prompt)
+
+
+def success_payload() -> dict:
+    return {
+        "candidates": [
+            {
+                "id": "C-1",
+                "title": "Low-privilege read of the admin summary",
+                "severity": "Medium",
+                "target": "http://admin:secretpass@127.0.0.1:8080/admin?debug=1",
+                "entrypoint": "/admin?debug=1",
+                "root_cause": "missing-authorization-check",
+                "principal": "lowpriv",
+                "resource": "admin summary",
+                "description": (
+                    "GET /admin returned 200 with the control session. "
+                    "Authorization: Bearer fake-bearer-token-abc123 "
+                    "Cookie: session=deadbeefcafebabe "
+                    "token=ghp_FAKEfakeFAKEfakeFAKEfakeFAKEfake1234"
+                ),
+            }
+        ]
+    }
+
+
+def candidate_payload() -> dict:
+    return {
+        "candidates": [
+            {
+                "id": "C-1",
+                "title": "Moderate path traversal",
+                "severity": "MODERATE",
+                "target": "http://admin:secretpass@127.0.0.1:8080/download?file=../app.py",
+                "user": "lowpriv",
+            },
+            {
+                "id": "C-1",
+                "title": "Duplicate candidate id",
+                "severity": "low",
+                "target": "http://127.0.0.1:8080/duplicate",
+            },
+            {
+                "id": "C-2",
+                "title": "Unknown severity becomes info",
+                "severity": "weird",
+                "url": "http://127.0.0.1:8080/profile?id=2",
+                "description": "profile page rendered for another identity",
+            },
+            "not-an-object",
+            {
+                "title": "Candidate without an id",
+                "severity": "high",
+                "check": "Broken Object Level Authorization",
+                "target": "http://127.0.0.1:8080/api/orders/7",
+            },
+        ]
+    }
+
+
+MODES = (
+    "success",
+    "fail",
+    "timeout",
+    "broken",
+    "empty",
+    "concurrency",
+    "candidate",
+    "jsonl",
+    "jsonl-no-candidate",
+)
+
+
+def event(kind: str, *, text: str = "") -> dict:
+    stamp = int(time.time() * 1000)
+    payload = {
+        "type": kind,
+        "timestamp": stamp,
+        "sessionID": "ses_fakehunter",
+        "part": {
+            "id": f"prt_{kind}",
+            "sessionID": "ses_fakehunter",
+            "messageID": "msg_fakehunter",
+            "type": kind.replace("_", "-"),
+        },
+    }
+    if text:
+        payload["part"]["text"] = text
+    return payload
+
+
+def jsonl_candidate_events(*, candidate: bool) -> list[dict]:
+    events = [
+        event("step_start"),
+        event("text", text="I will probe the profile page with the low-privilege session."),
+        event(
+            "tool",
+            text="",
+        ),
+    ]
+    if candidate:
+        message = (
+            "Here is the bounded result:\n\n"
+            "```json\n"
+            '{"candidates": [{"id": "J-1", "title": "Cross-user profile read",'
+            ' "severity": "medium", "target": "http://127.0.0.1:8080/profile?id=2",'
+            ' "entrypoint": "/profile?id=2", "root_cause": "missing-object-owner-check",'
+            ' "principal": "lowpriv", "resource": "profile 2",'
+            ' "description": "profile 2 rendered for the low-privilege session"}]}\n'
+            "```\n"
+            "Stop condition reached."
+        )
+    else:
+        message = "No candidate was reproducible within the request budget."
+    events.append(event("text", text=message))
+    events.append(event("step_finish"))
+    return events
+
+
+def main() -> int:
+    argument = os.environ.get("FAKE_HUNT_MODE")
+    if argument is None and len(sys.argv) > 1 and sys.argv[1] in MODES:
+        argument = sys.argv[1]
+    if argument in MODES:
+        mode = argument
+        prompt = sys.argv[2] if len(sys.argv) > 2 else sys.stdin.read()
+    else:
+        mode = "success"
+        prompt = sys.argv[1] if len(sys.argv) > 1 else sys.stdin.read()
+    save_prompt(prompt)
+    log("start")
+
+    if mode == "fail":
+        print("hunter failed before producing output", file=sys.stderr)
+        print("password=hunter2 session=abcdef123456", file=sys.stderr)
+        log("end")
+        return 2
+    if mode == "timeout":
+        time.sleep(30)
+        log("end")
+        return 0
+    if mode == "broken":
+        print('{"candidates": [', flush=True)
+        log("end")
+        return 0
+    if mode == "empty":
+        print(json.dumps({"candidates": []}), flush=True)
+        log("end")
+        return 0
+    if mode == "concurrency":
+        time.sleep(0.4)
+        print(json.dumps({"candidates": []}), flush=True)
+        log("end")
+        return 0
+    if mode == "candidate":
+        print(json.dumps(candidate_payload()), flush=True)
+        log("end")
+        return 0
+    if mode == "jsonl":
+        for item in jsonl_candidate_events(candidate=True):
+            print(json.dumps(item), flush=True)
+        log("end")
+        return 0
+    if mode == "jsonl-no-candidate":
+        for item in jsonl_candidate_events(candidate=False):
+            print(json.dumps(item), flush=True)
+        log("end")
+        return 0
+
+    print(json.dumps(success_payload()), flush=True)
+    print("debug: password=hunter2 Set-Cookie: session=deadbeefcafebabe", file=sys.stderr)
+    log("end")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

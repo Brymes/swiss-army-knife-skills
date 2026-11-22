@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/source.schema.json",
+  "title": "sak source decision card",
+  "description": "One row per external owner link, recording type, license and the disposition chosen for sak.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "url", "type", "license", "decision", "rationale"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "enum": ["vendor", "adapter", "engine", "reference", "external"]
+    },
+    "license": { "type": "string", "minLength": 1 },
+    "decision": {
+      "type": "string",
+      "enum": ["vendor", "adapter", "engine", "reference", "external"]
+    },
+    "rationale": { "type": "string", "minLength": 1 },
+    "notes": { "type": "string" },
+    "verified_at": { "type": "string" },
+    "checksum": { "type": "string" }
+  }
+}

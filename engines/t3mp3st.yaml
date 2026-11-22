@@ -1,0 +1,60 @@
+id: t3mp3st
+name: T3MP3ST
+description: >-
+  Multi-agent offensive-security war room and CLI. It wraps an AI coding agent you already run
+  (Claude Code, Codex, OpenCode, Hermes, Oh My Pi) or a local OpenAI-compatible model, and runs
+  recon, exploitation and reporting against an authorized target from a browser UI or the CLI.
+status: unverified
+license: AGPL-3.0
+homepage: https://github.com/elder-plinius/T3MP3ST
+source: https://github.com/elder-plinius/T3MP3ST
+requirements:
+  - node
+  - npm
+commands:
+  install:
+    - git clone --depth 1 https://github.com/elder-plinius/T3MP3ST.git vendor/external/t3mp3st
+    - npm --prefix vendor/external/t3mp3st install
+  up:
+    - cd vendor/external/t3mp3st && npm run server
+  down:
+    - 'echo "refused: T3MP3ST runs as a foreground npm server and keeps no pidfile. Stop it with Ctrl-C in the terminal that started it, or kill the exact PID you launched. sak will not terminate processes by name pattern." >&2; exit 2'
+  status:
+    - curl -fsS http://127.0.0.1:3333/api/health
+  doctor:
+    - node --version
+    - npm --version
+ports:
+  - 3333
+data_paths:
+  - vendor/external/t3mp3st
+  - vendor/external/t3mp3st/runs
+  - vendor/external/t3mp3st/.env
+models:
+  - connected local coding agent (keyless default)
+  - Ollama, LM Studio, vLLM or llama.cpp via an OpenAI-compatible local endpoint
+  - optional hosted keys OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, VENICE_API_KEY, XAI_API_KEY, NOVITA_API_KEY
+safety:
+  active: true
+  external: true
+  notes: >-
+    AGPL-3.0: never copy this tree into the repository; keep it under vendor/external/, which is
+    gitignored. The war room binds 127.0.0.1:3333 by default; keep it loopback-only. Drive it only
+    at authorized targets from scope.md and review every generated mission before launch.
+refusal:
+  missing_runtime: >-
+    Refused: T3MP3ST needs node and npm on PATH for the npm path, or Docker plus the Compose plugin
+    for the container path. `sak doctor` prints the install hints; sak never installs them.
+  missing_key: >-
+    No key is required: a connected coding agent or a local Ollama/llama.cpp endpoint is enough.
+    Hosted keys are optional and belong in vendor/external/t3mp3st/.env, never in the catalog.
+  message: >-
+    Exit 2 with the missing requirement and its hint. Nothing is cloned, installed or started until
+    `--execute` is passed.
+notes: >-
+  Two supported paths. npm: `npm install` then `npm run server` (UI at http://127.0.0.1:3333/ui/).
+  Docker: `cp .env.example .env` then `docker compose up -d`, which also publishes only
+  127.0.0.1:3333. `engine up` runs a foreground server, so `engine down` refuses by design rather
+  than killing processes by pattern; stop the server yourself. Requires Node 20+ in practice; the
+  repository does not pin an exact engine, so check `npm run doctor` after install. Out of scope
+  for v1: automated mission execution.

@@ -1,0 +1,30 @@
+id: fixture-alpha
+name: Alpha Scanner
+kind: cli
+status: verified
+description: Fixture scanner with a balanced profile for ranking tests.
+license: MIT
+domains:
+  - web
+  - api
+phases:
+  - scan
+modes:
+  - blackbox
+intensity: normal
+roles:
+  - primary
+ranking:
+  impact: 5
+  reliability: 4
+  stealth: 3
+  effort: 2
+  noise: 2
+requires:
+  - python3
+install:
+  command: echo install alpha
+safety:
+  active: true
+  intrusive: false
+  notes: Fixture only; no network traffic.

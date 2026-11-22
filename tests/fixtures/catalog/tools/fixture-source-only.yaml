@@ -1,0 +1,21 @@
+id: fixture-source-only
+name: Source Review Skill
+kind: skill
+status: verified
+description: Source-domain fixture skill excluded from web black-box plans.
+license: MIT
+domains:
+  - source
+phases:
+  - scan
+modes:
+  - source
+intensity: passive
+ranking:
+  impact: 5
+  reliability: 5
+  stealth: 5
+  effort: 1
+  noise: 1
+requires:
+  - python3

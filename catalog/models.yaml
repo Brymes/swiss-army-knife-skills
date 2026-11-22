@@ -1,0 +1,122 @@
+# Model profiles for the four jobs in a sak run.
+#
+# These are advisory cards, not configuration. `sak` never calls a model: an operator or an
+# agent harness does, and records which model served which role in run metadata. Each profile
+# names a job, not a vendor, so the same card survives a model generation change.
+#
+# status: unverified means we have not run the refusal probe in this repository.
+models:
+  - id: hunt-cheap
+    name: Cheap hunter profile
+    provider: operator-selected (any provider with a low-cost tier)
+    role: hunting
+    status: unverified
+    description: >-
+      High-volume, low-cost model for breadth: reading source, listing candidate endpoints,
+      grouping parameters and proposing the next probe. Chosen for price and speed, not for
+      deep reasoning.
+    strengths:
+      - cheapest per token, so it can read a whole repository in a wave
+      - fast enough for interactive triage
+    weaknesses:
+      - misses multi-step logic bugs
+      - more likely to state an unfounded conclusion confidently
+    refusal_risk: medium
+    cost: low
+    notes: >-
+      Use it for enumeration and summarising, never for a `confirmed` verdict. Every claim it
+      makes needs a deterministic check.
+    tags:
+      - hunting
+      - cheap
+
+  - id: gen-low-refusal
+    name: Low-refusal generator profile
+    provider: operator-selected
+    role: generation
+    status: unverified
+    description: >-
+      Model profile for payload and test-case generation on an authorized target, selected for
+      fewer refusals on legitimate security wording and for following a narrow format.
+    strengths:
+      - produces concrete payload variants instead of generic advice
+      - tolerates explicit authorized-testing context
+    weaknesses:
+      - a lower refusal rate can also mean less caution about scope
+      - unmeasured here; the refusal probe is the only evidence we accept
+    refusal_risk: low
+    cost: medium
+    notes: >-
+      Refusal risk describes the profile's intent, not a measured rate. Run
+      `knowledge/models/refusal-probe.md` before trusting it, and keep the scope statement in
+      every request.
+    tags:
+      - generation
+      - mutation
+
+  - id: verify-high-effort
+    name: High-effort verifier profile
+    provider: operator-selected (reasoning tier)
+    role: verification
+    status: unverified
+    description: >-
+      Reasoning-heavy profile for adjudicating candidates: is the boundary reachable, is there a
+      control, does the evidence show impact, and should the finding be confirmed, held for
+      validation or rejected.
+    strengths:
+      - better at multi-step reachability and at noticing a missing control
+      - follows a structured verdict rubric
+    weaknesses:
+      - expensive per candidate; slow
+      - can over-reason a simple false positive into a plausible story
+    refusal_risk: medium
+    cost: high
+    notes: >-
+      Give it the evidence artifacts, not the hunter's summary. A verifier that cannot name an
+      evidence path must return `needs_validation`.
+    tags:
+      - verification
+      - reasoning
+
+  - id: report-writer
+    name: Report writer profile
+    provider: operator-selected
+    role: reporting
+    status: unverified
+    description: >-
+      Model profile for turning confirmed findings and coverage gaps into a report that separates
+      observation, interpretation and untested hypothesis.
+    strengths:
+      - consistent structure across findings
+      - good at shortening without dropping the evidence pointer
+    weaknesses:
+      - may smooth over an unresolved gap
+      - may invent severity rationale if not given the impact evidence
+    refusal_risk: low
+    cost: medium
+    notes: >-
+      Feed it `findings.json` and the evidence paths. It may not add a finding, raise a severity
+      or remove a gap from the coverage ledger.
+    tags:
+      - reporting
+
+  - id: gpt-6.1-terra
+    name: GPT 6.1 Terra (operator report, source text pending)
+    provider: not confirmed (reported by the operator; no provider route verified here)
+    role: generation
+    status: unverified
+    description: >-
+      Model name reported by the operator. The exact note, provider route and served identifier are
+      unconfirmed, and no capability or quality claim is recorded here.
+    weaknesses:
+      - no source text for the operator note in this repository
+      - no probe, eval or comparison has been run
+      - availability, pricing and context limits unknown here
+    notes: >-
+      LABELLED OPERATOR REPORT, SOURCE TEXT PENDING, UNVERIFIED. Only the model name is recorded;
+      the operator's exact wording has been requested. Do not treat this card as a benchmark or a
+      recommendation, and do not copy a claim from it into a report. See
+      `knowledge/models/operator-reports.md` and the probe results table.
+    tags:
+      - operator-report
+      - unverified

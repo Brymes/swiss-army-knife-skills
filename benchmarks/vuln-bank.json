@@ -1,0 +1,233 @@
+{
+  "schema": "sak.skill.benchmark.v1",
+  "benchmark": "dummy-target-rubric-v1",
+  "date": "2026-11-22",
+  "target": "vuln-bank",
+  "target_url": "http://127.0.0.1:15000",
+  "profile": "targets/vuln-bank/blackbox/profile.yaml",
+  "run_dir": "runs/blackbox-vuln-bank-final",
+  "environment": "macOS SSH tunnel to a remote lab host; vuln-bank container",
+  "rubric": {
+    "expected": 15,
+    "confirmed": 15,
+    "needs_validation": 0,
+    "rejected": 0,
+    "coverage": {
+      "covered": 15,
+      "deferred": 0,
+      "missed": 0,
+      "partial": 0,
+      "ratio": 1.0
+    }
+  },
+  "checks": {
+    "confirmed_artifacts": 16,
+    "needs_validation_artifacts": 0,
+    "rejected_artifacts": 0,
+    "requests": 457
+  },
+  "findings": [
+    {
+      "id": "F-VB-AUTH-01",
+      "issue": "VB-AUTH-01",
+      "title": "SQL injection in login",
+      "class": "authentication",
+      "severity": "critical",
+      "status": "confirmed",
+      "entrypoint": "/login",
+      "check": "VB-AUTH-01",
+      "artifact": "exploit/VB-AUTH-01.json",
+      "evidence_sha256": "7d42435239a0cd4a266f67d16e18e821b0e75688c810cb4932e94f10594a0704"
+    },
+    {
+      "id": "F-VB-AUTH-02",
+      "issue": "VB-AUTH-02",
+      "title": "Tampered JWT claims reach admin data",
+      "class": "authentication",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/dashboard",
+      "check": "VB-AUTH-02",
+      "artifact": "exploit/VB-AUTH-02.json",
+      "evidence_sha256": "aef3501e632f4301d72676e7d536ab5c6eb550be2f6f41cb089961ab1f4e8290"
+    },
+    {
+      "id": "F-VB-BOLA-01",
+      "issue": "VB-BOLA-01",
+      "title": "Two-account IDOR on transaction history",
+      "class": "idor",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/transactions/<account_number>",
+      "check": "VB-BOLA-01",
+      "artifact": "exploit/VB-BOLA-01.json",
+      "evidence_sha256": "bda0f6a53a3c60ad393dc5c450cea56446c0d8e611dcc466191171dd8258deb2"
+    },
+    {
+      "id": "F-VB-BOLA-02",
+      "issue": "VB-BOLA-02",
+      "title": "Virtual card object-level access across accounts",
+      "class": "idor",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/api/virtual-cards/<card_id>",
+      "check": "VB-BOLA-02",
+      "artifact": "exploit/VB-BOLA-02.json",
+      "evidence_sha256": "0c667b8884873d7080f7d977bcbc260af711d4cc5043b260edd369c62cbfa24a"
+    },
+    {
+      "id": "F-VB-BOPLA-01",
+      "issue": "VB-BOPLA-01",
+      "title": "Mass assignment on profile update",
+      "class": "authorization",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/update_bio",
+      "check": "VB-BOPLA-01",
+      "artifact": "exploit/VB-BOPLA-01.json",
+      "evidence_sha256": "2aa9f2ff2271397a8a70d522742bdff9a93c41182597a549f9d06031b001eca6"
+    },
+    {
+      "id": "F-VB-SQLI-01",
+      "issue": "VB-SQLI-01",
+      "title": "SQL injection in bill-payment creation",
+      "class": "sql-injection",
+      "severity": "critical",
+      "status": "confirmed",
+      "entrypoint": "/api/bill-payments/create",
+      "check": "VB-SQLI-01",
+      "artifact": "exploit/VB-SQLI-01.json",
+      "evidence_sha256": "7473af2b3554dff1981f12acfae80adc3869fa09fdf1e1885311e754e71d7809"
+    },
+    {
+      "id": "F-VB-XSS-01",
+      "issue": "VB-XSS-01",
+      "title": "Stored XSS in profile bio",
+      "class": "xss-stored",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/update_bio",
+      "check": "VB-XSS-01",
+      "artifact": "exploit/VB-XSS-01.json",
+      "evidence_sha256": "7986fc6af97701dd264674ca1fe9467eaf4bb23202c9408875702fa703e92971"
+    },
+    {
+      "id": "F-VB-NEG-01",
+      "issue": "VB-NEG-01",
+      "title": "Negative transfer credits the sender",
+      "class": "business-logic",
+      "severity": "critical",
+      "status": "confirmed",
+      "entrypoint": "/transfer",
+      "check": "VB-NEG-01",
+      "artifact": "exploit/VB-NEG-01.json",
+      "evidence_sha256": "c0d330cc57a558441c42293da0731157265cdffd86501982910ee55920e1bc91"
+    },
+    {
+      "id": "F-VB-CARD-01",
+      "issue": "VB-CARD-01",
+      "title": "Client-controlled exchange rate on card funding",
+      "class": "business-logic",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/api/virtual-cards/<card_id>/fund",
+      "check": "VB-CARD-01",
+      "artifact": "exploit/VB-CARD-01.json",
+      "evidence_sha256": "c95f9c792e2ec2d92a1582079f330613db22fe69d495417bdcbb04730bf71802"
+    },
+    {
+      "id": "F-VB-MERCH-01",
+      "issue": "VB-MERCH-01",
+      "title": "Merchant charge replay and negative amount",
+      "class": "business-logic",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/api/v1/payments/charge",
+      "check": "VB-MERCH-01",
+      "artifact": "exploit/VB-MERCH-01.json",
+      "evidence_sha256": "be641a9b6c5f1e4ac97b024deac5f7ccc9f8e1ac971543dfadf9ef6e602a95cb"
+    },
+    {
+      "id": "F-VB-GQL-01",
+      "issue": "VB-GQL-01",
+      "title": "GraphQL introspection exposes admin analytics",
+      "class": "admin-privilege",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/graphql",
+      "check": "VB-GQL-01",
+      "artifact": "exploit/VB-GQL-01.json",
+      "evidence_sha256": "ae2cbda566a3ccf7485e05a8bbdc5b23411e6b7e58405e060958ae957042f693"
+    },
+    {
+      "id": "F-VB-SSRF-01",
+      "issue": "VB-SSRF-01",
+      "title": "Server-side request forgery via profile image URL",
+      "class": "ssrf",
+      "severity": "critical",
+      "status": "confirmed",
+      "entrypoint": "/upload_profile_picture_url",
+      "check": "VB-SSRF-01",
+      "artifact": "exploit/VB-SSRF-01.json",
+      "evidence_sha256": "8a38227ffc0e9b9c83a636fbb2fca4a2041baf7d35a7c62c1454c2bbe5be5fb0"
+    },
+    {
+      "id": "F-VB-UPLOAD-01",
+      "issue": "VB-UPLOAD-01",
+      "title": "Unrestricted profile-picture upload",
+      "class": "unrestricted-upload",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/upload_profile_picture",
+      "check": "VB-UPLOAD-01",
+      "artifact": "exploit/VB-UPLOAD-01.json",
+      "evidence_sha256": "cd9af01fbd3f97bd906263a2f51c1086760e7c2a2adfecfb5e20701776349933"
+    },
+    {
+      "id": "F-VB-INFO-01",
+      "issue": "VB-INFO-01",
+      "title": "Exposed environment and debug endpoints",
+      "class": "information-disclosure",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/.env",
+      "check": "VB-INFO-01",
+      "artifact": "exploit/VB-INFO-01.json",
+      "evidence_sha256": "8554e9535f68651486b0ff6e791aa15eb372bbeac07c3656646db252988ba036"
+    },
+    {
+      "id": "F-VB-AI-01",
+      "issue": "VB-AI-01",
+      "title": "Prompt injection in the AI support chat",
+      "class": "prompt-injection",
+      "severity": "high",
+      "status": "confirmed",
+      "entrypoint": "/api/ai/chat/anonymous",
+      "check": "VB-AI-01",
+      "artifact": "exploit/VB-AI-01.json",
+      "evidence_sha256": "dee47ec96ee695976982fe0f9771fc13ba42ddcd1e79d165dbac49c4816729ff"
+    }
+  ],
+  "hunt": {
+    "run_dir": "runs/blackbox-vuln-hunt2",
+    "prompts": [
+      "VIBE-01",
+      "VIBE-02",
+      "VIBE-03"
+    ],
+    "candidates": 1,
+    "errors": 1,
+    "note": "VIBE-02 timed out; the candidate targeted the local fixture at 127.0.0.1:8765, not vuln-bank, so it is not a benchmark proof."
+  },
+  "caveats": [
+    "Mass assignment is exploitable on /register, not the rubric-named /update_bio.",
+    "Stored XSS proves raw storage and the admin innerHTML sink; a browser dialog was not driven.",
+    "GraphQL introspection is confirmed; the cross-account admin summary is denied and recorded as VB-GQL-02.",
+    "The AI chat rate limit can return HTTP 429 on replay; treat it as needs_validation, not a target failure."
+  ],
+  "commands": [
+    "uv run sak exploit --run runs/blackbox-vuln-bank-final --target http://127.0.0.1:15000 --profile targets/vuln-bank/blackbox/profile.yaml --json",
+    "uv run sak verify --run runs/blackbox-vuln-bank-final --profile targets/vuln-bank/blackbox/profile.yaml --json",
+    "uv run sak report runs/blackbox-vuln-bank-final"
+  ]
+}

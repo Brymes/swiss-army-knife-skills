@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/engine.schema.json",
+  "title": "sak engine card",
+  "description": "An optional external engine. Commands are dry-run unless sak engine runs with --execute.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "description", "license", "requirements", "commands"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "unverified", "experimental", "deprecated"]
+    },
+    "license": { "type": "string", "minLength": 1 },
+    "homepage": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "requirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Executables, compose plugins, python modules or ENV_VARS such as docker, docker compose, node, postgres, OPENAI_API_KEY."
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["install", "up", "down", "status"],
+      "properties": {
+        "install": { "$ref": "#/$defs/command_list" },
+        "up": { "$ref": "#/$defs/command_list" },
+        "down": { "$ref": "#/$defs/command_list" },
+        "status": { "$ref": "#/$defs/command_list" },
+        "doctor": { "$ref": "#/$defs/command_list" }
+      }
+    },
+    "cwd": {
+      "type": "string",
+      "description": "Working directory relative to the engine root, or an absolute path."
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "ports": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1, "maximum": 65535 }
+    },
+    "data_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "models": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "active": { "type": "boolean" },
+        "external": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "missing_runtime": { "type": "string" },
+        "missing_key": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "command_list": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      ]
+    }
+  }
+}

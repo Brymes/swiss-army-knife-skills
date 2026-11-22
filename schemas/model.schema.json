@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/model.schema.json",
+  "title": "sak model card",
+  "description": "A model profile used for hunting, mutation, verification or reporting. Cards are advisory; sak never calls a model itself.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "provider", "role", "description"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "provider": { "type": "string", "minLength": 1 },
+    "role": {
+      "type": "string",
+      "enum": ["hunting", "generation", "verification", "reporting", "mutation", "orchestration", "embedding"]
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "unverified", "experimental", "deprecated"]
+    },
+    "strengths": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "weaknesses": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "refusal_risk": { "type": "string", "enum": ["low", "medium", "high"] },
+    "cost": { "type": "string", "enum": ["low", "medium", "high"] },
+    "context_window": { "type": "integer", "minimum": 1 },
+    "notes": { "type": "string" },
+    "source": { "type": "string" },
+    "tags": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+  }
+}

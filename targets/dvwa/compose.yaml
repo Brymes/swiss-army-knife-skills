@@ -1,0 +1,25 @@
+# DVWA low-security target harness.
+#
+# Loopback only: the published port is always bound to 127.0.0.1. Override the
+# host port with DVWA_PORT in targets/dvwa/.env (ignored by git), for example
+# DVWA_PORT=8081. The container port stays 80.
+#
+# Start:  docker compose -f targets/dvwa/compose.yaml up -d
+# Stop:   docker compose -f targets/dvwa/compose.yaml down
+# Reset:  docker compose -f targets/dvwa/compose.yaml down -v
+services:
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: sak-dvwa
+    ports:
+      - "127.0.0.1:${DVWA_PORT:-8080}:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 80) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    labels:
+      org.sak.target: dvwa
+      org.sak.scope: loopback-only

@@ -1,0 +1,115 @@
+{
+  "schema_version": "1",
+  "run_id": "fixture-findings",
+  "generated_at": "2026-11-15T10:00:00Z",
+  "target": "http://127.0.0.1:8765",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "SQL injection in the login handler",
+      "status": "confirmed",
+      "severity": "critical",
+      "asset": "http://127.0.0.1:8765",
+      "entrypoint": "/login",
+      "root_cause": "sql-injection",
+      "principal": "anonymous",
+      "resource": "users table",
+      "description": "The username parameter reaches a string-built SQL query. The quote payload changes the result set and returns the admin session.",
+      "impact": "Authentication bypass and read access to the users table.",
+      "remediation": "Use a parameterized query and reject multi-statement input.",
+      "cwe": "CWE-89",
+      "source": {
+        "tool": "curl",
+        "prompt": "INV-01"
+      },
+      "evidence": [
+        {
+          "id": "E-sqli-request",
+          "kind": "request",
+          "path": "evidence/sqli-request.txt",
+          "sha256": "7f63c4be4da68ab4683ee1fcaf50b784b4c7ec287d6de9c70593343f435bfb22",
+          "timestamp": "2026-11-15T09:58:00Z",
+          "producer": "curl"
+        },
+        {
+          "id": "E-sqli-response",
+          "kind": "response",
+          "path": "evidence/sqli-response.txt",
+          "sha256": "9eb531daacbb17e227e90d6a11c01a3dfddc6ef74c5c5d12d0963bdf242d46b0",
+          "timestamp": "2026-11-15T09:58:01Z",
+          "producer": "curl"
+        }
+      ],
+      "created_at": "2026-11-15T09:58:02Z",
+      "updated_at": "2026-11-15T09:58:02Z"
+    },
+    {
+      "id": "F-002",
+      "title": "Reflected input on the search page",
+      "status": "needs_validation",
+      "severity": "medium",
+      "asset": "http://127.0.0.1:8765",
+      "entrypoint": "/search",
+      "root_cause": "reflected-xss",
+      "principal": "anonymous",
+      "resource": "search results",
+      "description": "The q parameter is reflected unencoded; browser execution is not yet observed.",
+      "open_question": "Does a browser execute the reflected value under the fixture's content type?",
+      "next_action": "Run the control and candidate payloads in the local browser harness and save both responses.",
+      "evidence": [
+        {
+          "id": "E-xss-note",
+          "kind": "observed",
+          "path": "evidence/xss-note.txt",
+          "sha256": "bb3de2f8e7e110d32440cdd6f1693ad8aef2389ea6adbac480fbf01ac468b21a",
+          "timestamp": "2026-11-15T09:59:00Z",
+          "producer": "manual triage"
+        }
+      ],
+      "created_at": "2026-11-15T09:59:00Z",
+      "updated_at": "2026-11-15T09:59:00Z"
+    },
+    {
+      "id": "F-003",
+      "title": "Redirect parameter accepts external hosts",
+      "status": "rejected",
+      "severity": "low",
+      "asset": "http://127.0.0.1:8765",
+      "entrypoint": "/redirect",
+      "root_cause": "open-redirect",
+      "principal": "anonymous",
+      "resource": "redirect target",
+      "reason": "The handler only accepts relative paths; the observed 302 stays on the fixture origin.",
+      "created_at": "2026-11-15T09:59:30Z",
+      "updated_at": "2026-11-15T10:00:00Z"
+    },
+    {
+      "id": "F-004",
+      "title": "SQL injection on login reported by the scanner",
+      "status": "confirmed",
+      "severity": "high",
+      "asset": "http://127.0.0.1:8765",
+      "entrypoint": "/login",
+      "root_cause": "sql-injection",
+      "principal": "anonymous",
+      "resource": "users table",
+      "description": "The scanner reports the same login query with a different payload. Same root cause as F-001.",
+      "source": {
+        "tool": "scanner-adapter"
+      },
+      "evidence": [
+        {
+          "id": "E-sqli-response-scanner",
+          "kind": "response",
+          "path": "evidence/sqli-response.txt",
+          "sha256": "9eb531daacbb17e227e90d6a11c01a3dfddc6ef74c5c5d12d0963bdf242d46b0",
+          "timestamp": "2026-11-15T09:58:30Z",
+          "producer": "scanner-adapter"
+        }
+      ],
+      "created_at": "2026-11-15T09:58:30Z",
+      "updated_at": "2026-11-15T09:58:30Z"
+    }
+  ],
+  "dedupe": []
+}

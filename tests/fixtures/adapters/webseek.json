@@ -1,0 +1,23 @@
+{
+  "query": "fixture query",
+  "provider": "fixture-provider",
+  "results": [
+    {
+      "title": "Fixture research result",
+      "url": "https://example.test/report",
+      "snippet": "A fixture snippet about the localhost fixture.",
+      "rank": 1
+    },
+    {
+      "title": "Second fixture result",
+      "url": "https://example.test/second",
+      "snippet": "Another offline fixture result.",
+      "rank": 2
+    }
+  ],
+  "usage": {
+    "requests": 2,
+    "tokens": 1200
+  },
+  "cost_usd": 0.004
+}

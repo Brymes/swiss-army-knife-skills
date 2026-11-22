@@ -1,0 +1,3 @@
+The search page reflects the `q` parameter into the HTML body without encoding.
+The control request with a harmless value renders as text; the candidate value
+renders as an element. A browser execution check is still missing.

@@ -1,0 +1,71 @@
+name: Bug report
+description: Report a reproducible problem in sak or the skill
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Do not include tokens, cookies, real credentials,
+        personal data or a live third-party target. Use the localhost fixture or a
+        documented lab.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: "`uv run sak --version` or the commit hash"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI / catalog
+        - plan / prompts / hunt
+        - exploit / verify / report
+        - skill install / OpenCode
+        - harness / model / MCP
+        - docs / benchmark
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or skill prompt
+      description: The exact command, with secrets removed
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior and logs
+      description: Sanitized output; include exit codes where useful
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, uv, harness/model if relevant, Docker/browser if relevant
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I used an authorized target or the localhost fixture.
+          required: true
+        - label: I removed secrets, cookies and personal data.
+          required: true
+        - label: I searched existing issues.
+          required: true

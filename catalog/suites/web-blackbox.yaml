@@ -1,0 +1,78 @@
+id: web-blackbox
+name: Web black-box
+description: Authorized black-box web and API assessment with no source access; scan, hunt authorization and injection invariants, then verify with fresh replay.
+profile: web-blackbox
+domains:
+  - web
+  - api
+filters:
+  kinds:
+    - cli
+    - skill
+    - platform
+  statuses:
+    - verified
+  domains:
+    - web
+    - api
+  modes:
+    - blackbox
+    - greybox
+include:
+  prompts:
+    - INV-01
+    - INV-02
+    - INV-03
+    - INV-06
+    - INV-09
+    - INV-13
+    - SSRF-01
+    - SSRF-02
+    - SSRF-03
+    - SSRF-06
+    - VIBE-01
+    - VIBE-02
+    - VIBE-03
+    - VIBE-04
+    - VIBE-05
+    - VIBE-06
+    - VIBE-07
+    - VIBE-08
+    - VIBE-09
+    - VIBE-10
+    - VIBE-11
+    - VIBE-12
+    - VIBE-13
+    - VIBE-14
+    - VER-01
+    - REP-01
+budget:
+  primary: 3
+  support: 4
+  fallback: 3
+  brute: 1
+targets:
+  default_port: 8765
+  scope_required: true
+notes: |
+  Roles: primary runs first, support widens coverage, fallback covers a missing or
+  failed primary, brute is a held reserve that needs explicit owner approval.
+  Waves:
+    passive: read scope.md, the threat model and saved responses; select cards and
+      map assets, roles, object references and server-side fetch points. No target traffic.
+    broad: primary and support scanners and prompt hunters issue bounded read-only
+      requests (GET/HEAD/OPTIONS) plus the documented low-impact writes, in parallel.
+    targeted: the cheapest failing hypothesis per card is replayed against the exact
+      endpoint and account named in the threat model; writes are serialized.
+    brute: only if the owner opens the reserve in scope.md; ffuf, sqlmap and other
+      high-noise cards stay unrun by default.
+    verify: a fresh verifier context re-derives each claim from evidence pointers,
+      prefers a different principal and path, and assigns confirmed,
+      needs_validation or rejected.
+  Parallel: read-only probes and replays in separate accounts may run in parallel;
+  every write, delete, spend or message is serialized at one request per second.
+  Budget: 3 primary, 4 support, 3 fallback and 1 brute card; 15 minutes and 1 req/s
+  unless scope.md records an override.
+  Stop conditions: scope or account mismatch, a destructive or denial-of-service
+  action, an unapproved brute card, an exhausted time/rate budget, two consecutive
+  waves with no new signal, or a verifier that cannot reproduce a claim.

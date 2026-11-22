@@ -1,0 +1,63 @@
+id: gitleaks
+name: Gitleaks
+kind: cli
+status: verified
+description: >-
+  Secret scanner for working trees and git history. Cheap, passive and deterministic, so it runs
+  early on every source-code engagement.
+license: MIT
+homepage: https://github.com/gitleaks/gitleaks
+domains:
+  - source
+phases:
+  - recon
+  - scan
+modes:
+  - source
+  - whitebox
+intensity: passive
+roles:
+  - primary
+  - triage
+ranking:
+  impact: 4
+  reliability: 5
+  stealth: 5
+  effort: 1
+  noise: 1
+tags:
+  - secrets
+  - passive
+requires:
+  - gitleaks
+install:
+  command: brew install gitleaks
+  manager: brew
+run:
+  command: gitleaks
+  args:
+    - detect
+    - --source
+    - "{target}"
+    - --report-format
+    - json
+    - --report-path
+    - "{output}/gitleaks.json"
+    - --redact
+adapter: null
+outputs:
+  - JSON report with redacted secrets
+evidence:
+  - the rule, file, commit and line, with the value redacted in the report
+safety:
+  active: false
+  intrusive: false
+  destructive: false
+  notes: >-
+    Passive. Always pass `--redact`; never copy a real secret into findings, logs or the report.
+    Rotate any credential you find and record only a fingerprint.
+sources:
+  - url: https://github.com/gitleaks/gitleaks
+    license: MIT
+notes: >-
+  Highest value per minute on a source engagement: it needs no target access and no model call.

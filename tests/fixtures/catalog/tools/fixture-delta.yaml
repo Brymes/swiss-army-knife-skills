@@ -1,0 +1,27 @@
+id: fixture-delta
+name: Delta Fuzzer
+kind: cli
+status: verified
+description: API fixture fuzzer used for fallback-role assertions.
+license: MIT
+domains:
+  - api
+phases:
+  - scan
+modes:
+  - blackbox
+intensity: normal
+roles:
+  - fallback
+ranking:
+  impact: 3
+  reliability: 3
+  stealth: 2
+  effort: 2
+  noise: 4
+requires:
+  - python3
+safety:
+  active: true
+  intrusive: true
+  notes: Fixture only; do not execute.

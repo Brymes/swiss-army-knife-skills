@@ -1,0 +1,21 @@
+id: fixture-missing-req
+name: Missing Requirement
+kind: cli
+status: verified
+description: Verified fixture card whose runtime requirement is deliberately absent.
+license: MIT
+domains:
+  - web
+phases:
+  - scan
+modes:
+  - blackbox
+intensity: normal
+ranking:
+  impact: 5
+  reliability: 5
+  stealth: 5
+  effort: 1
+  noise: 1
+requires:
+  - sak-fixture-missing-binary

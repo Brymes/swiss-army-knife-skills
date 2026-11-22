@@ -1,0 +1,61 @@
+id: artex
+name: ARTEX
+description: >-
+  AI autonomous penetration-testing system with a Go backend and Next.js UI: task planning, asset
+  graph, traffic recording, human-in-the-loop intercept approvals and per-task findings.
+status: unverified
+license: AGPL-3.0
+homepage: https://github.com/horizonl/ARTEX
+source: https://github.com/horizonl/ARTEX
+requirements:
+  - docker
+  - docker compose
+commands:
+  install:
+    - git clone --depth 1 --branch english-ui https://github.com/horizonl/ARTEX.git vendor/external/artex
+    - cp vendor/external/artex/.env.example vendor/external/artex/.env
+  up:
+    - cd vendor/external/artex && docker compose up -d
+  down:
+    - cd vendor/external/artex && docker compose down
+  status:
+    - curl -fsS -o /dev/null http://127.0.0.1:8787/ && echo up
+  doctor:
+    - docker version
+    - docker compose version
+ports:
+  - 8787
+data_paths:
+  - vendor/external/artex
+  - vendor/external/artex/data
+  - vendor/external/artex/skills
+models:
+  - ANTHROPIC_API_KEY or OPENAI_API_KEY, or a provider configured in the UI
+  - custom ARTEX_LLM_BASE_URL / ARTEX_LLM_MODEL / ARTEX_LLM_PROVIDER entries
+safety:
+  active: true
+  external: true
+  notes: >-
+    AGPL-3.0: external only, under the gitignored vendor/external/. Provenance is NOT verified: the
+    project's own upstream (Autumn-27/ARTEX) returned 404, and the english-ui mirror named here has
+    not been checked against a concrete upstream revision or release. Treat the mirror as unproven
+    and re-verify it, including the license file, before installing; the install path is not
+    validated. Keep 127.0.0.1:8787 loopback-only, set a real POSTGRES_PASSWORD, and use intercept
+    approvals for anything that changes target state. Authorized targets only.
+refusal:
+  missing_runtime: >-
+    Refused: ARTEX needs the docker CLI plus the docker compose plugin for the supported one-click
+    or compose path. PostgreSQL is bundled by compose; a host Postgres (psql) is needed only for
+    the local-build path, which v1 does not cover.
+  missing_key: >-
+    Refused on start without an LLM provider: set ANTHROPIC_API_KEY or OPENAI_API_KEY in
+    vendor/external/artex/.env, or finish the provider step in the UI. sak never reads or writes
+    those values.
+  message: >-
+    Exit 2 with the missing requirement and its hint. The clone, .env copy and compose up all wait
+    for `--execute`.
+notes: >-
+  Container path: copy .env.example to .env, set POSTGRES_PASSWORD and one provider key, then
+  compose up; open http://127.0.0.1:8787 and finish /setup. The image bundles ripgrep, curl, vim,
+  npm and nmap. An install.sh also offers a local build, which needs Go, Node and a reachable
+  PostgreSQL; that path stays out of scope for v1.

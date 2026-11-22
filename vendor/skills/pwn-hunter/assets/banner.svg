@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-label="PWN HUNTER banner">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#05070d"/>
+      <stop offset="0.55" stop-color="#0a0f1e"/>
+      <stop offset="1" stop-color="#120a1f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00ffa3"/>
+      <stop offset="0.5" stop-color="#4cc9ff"/>
+      <stop offset="1" stop-color="#ff2e97"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00ffa3" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ff2e97" stop-opacity="0.15"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#1b2740" stroke-width="0.6" opacity="0.5"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="400" fill="url(#bg)"/>
+  <rect width="1280" height="400" fill="url(#grid)"/>
+  <rect x="0" y="0" width="1280" height="400" fill="none" stroke="#1b2740" stroke-width="2"/>
+
+  <!-- binary rain -->
+  <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#00ffa3" opacity="0.18">
+    <text x="40" y="60">01101000</text><text x="40" y="90">11010010</text>
+    <text x="40" y="120">00101101</text><text x="40" y="150">10110011</text>
+    <text x="40" y="180">01011100</text><text x="40" y="210">11100010</text>
+    <text x="1180" y="70">1011 0110</text><text x="1180" y="100">0110 1001</text>
+    <text x="1180" y="130">1101 0010</text><text x="1180" y="160">0010 1111</text>
+    <text x="1180" y="190">1001 1100</text><text x="1180" y="220">0110 0011</text>
+  </g>
+
+  <!-- skull mark -->
+  <g transform="translate(120,148)" filter="url(#glow)">
+    <path d="M46 0C20 0 0 20 0 46c0 17 9 29 20 37v17c0 5 4 8 9 8h8v-14h8v14h14v-14h8v14h8c5 0 9-3 9-8V83c11-8 20-20 20-37C112 20 92 0 66 0z"
+          fill="#0c1222" stroke="url(#accent)" stroke-width="3"/>
+    <circle cx="28" cy="48" r="11" fill="#00ffa3"/>
+    <circle cx="84" cy="48" r="11" fill="#ff2e97"/>
+    <path d="M46 78l10 14 10-14" fill="none" stroke="#4cc9ff" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- title -->
+  <text x="270" y="170" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="76" font-weight="800"
+        letter-spacing="6" fill="#eaf6ff" filter="url(#glow)">PWN HUNTER</text>
+
+  <rect x="274" y="196" width="620" height="4" fill="url(#fade)"/>
+
+  <text x="274" y="240" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="21" fill="#9fb3c8">
+    binary exploitation <tspan fill="#00ffa3">·</tspan> primitive-driven <tspan fill="#ff2e97">·</tspan> agent skill
+  </text>
+
+  <!-- terminal block -->
+  <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="15">
+    <text x="276" y="292" fill="#4cc9ff">$ checksec ./chall</text>
+    <text x="300" y="318" fill="#8aa0b8">NX <tspan fill="#00ffa3">on</tspan>   PIE <tspan fill="#00ffa3">on</tspan>   Canary <tspan fill="#00ffa3">on</tspan>   Full RELRO <tspan fill="#00ffa3">on</tspan></text>
+    <text x="276" y="344" fill="#4cc9ff">$ exploit.py</text>
+    <text x="300" y="370" fill="#00ffa3">[+] leaked libc  <tspan fill="#eaf6ff">ret2libc → system("/bin/sh")</tspan>  <tspan fill="#ff2e97">SHELL</tspan></text>
+  </g>
+
+  <!-- corner brackets -->
+  <g stroke="#00ffa3" stroke-width="2" fill="none" opacity="0.7">
+    <path d="M28 28h44M28 28v44"/>
+    <path d="M1252 372h-44M1252 372v-44"/>
+  </g>
+</svg>

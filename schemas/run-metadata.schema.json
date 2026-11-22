@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/run-metadata.schema.json",
+  "title": "sak run metadata",
+  "description": "Revision, scope, configuration and usage for one assessment run. A later run is only comparable when this record matches.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "started_at", "target"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "ended_at": { "type": "string", "format": "date-time" },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "base_url": { "type": "string" },
+        "scope": { "type": "string" },
+        "authorized": { "type": "boolean" }
+      }
+    },
+    "suite": { "type": "string" },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "run_id": { "type": "string" }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "fixture_revision": { "type": "string" }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "agent": { "type": "string" },
+        "model": { "type": "string" },
+        "provider": { "type": "string" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seconds": { "type": "integer", "minimum": 0 },
+        "requests": { "type": "integer", "minimum": 0 },
+        "tokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

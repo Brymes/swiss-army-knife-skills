@@ -1,0 +1,54 @@
+{
+  "schema_version": "1",
+  "run_id": "fixture-findings",
+  "generated_at": "2026-11-15T10:00:00Z",
+  "target": "http://127.0.0.1:8765",
+  "boundaries": [
+    {
+      "id": "TB-01",
+      "name": "Login handler to database",
+      "description": "Credentials cross the HTTP handler into the SQL query.",
+      "status": "covered",
+      "probes": [
+        {
+          "id": "P-01",
+          "description": "Login with fixture credentials and quote payload",
+          "executed": true,
+          "tool": "curl",
+          "executed_at": "2026-11-15T09:57:00Z",
+          "result": "Database error and admin session observed",
+          "evidence": [
+            {
+              "id": "E-coverage-login",
+              "kind": "log",
+              "path": "evidence/coverage-login.txt",
+              "sha256": "ee735e0d8e41d7372cd579266acb34258496e63125642d89ff9a4b7bb08063b1",
+              "timestamp": "2026-11-15T09:57:30Z",
+              "producer": "curl"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TB-02",
+      "name": "Session cookie to profile page",
+      "status": "uncovered",
+      "gap": "Authenticated browser replay was planned but not executed.",
+      "probes": [
+        {
+          "id": "P-02",
+          "description": "Replay the session cookie against /profile",
+          "executed": false
+        }
+      ]
+    },
+    {
+      "id": "TB-03",
+      "name": "Admin API",
+      "status": "excluded",
+      "gap": "Admin routes are outside the authorized scope for this fixture run.",
+      "probes": []
+    }
+  ]
+}

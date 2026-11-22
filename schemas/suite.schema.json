@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/suite.schema.json",
+  "title": "sak suite card",
+  "description": "A named selection profile: hard filters, explicit includes and a bounded role budget.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "description", "profile", "filters"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "profile": {
+      "type": "string",
+      "enum": ["web-blackbox", "web-source", "binary", "api-blackbox", "custom"]
+    },
+    "domains": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["web", "api", "source", "binary", "cloud", "osint", "macos", "llm", "network", "mobile"]
+      }
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["skill", "cli", "platform", "service", "reference", "mcp"]
+          }
+        },
+        "statuses": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["verified", "unverified", "experimental", "deprecated"]
+          }
+        },
+        "domains": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["web", "api", "source", "binary", "cloud", "osint", "macos", "llm", "network", "mobile"]
+          }
+        },
+        "modes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["blackbox", "greybox", "whitebox", "source", "binary", "passive"]
+          }
+        },
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "Runtime requirements the target environment must satisfy for the plan to be actionable."
+        },
+        "tags": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "exclude_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "include": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tools": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "prompts": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "type": "integer", "minimum": 0 },
+        "support": { "type": "integer", "minimum": 0 },
+        "fallback": { "type": "integer", "minimum": 0 },
+        "brute": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "scope_required": { "type": "boolean" }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

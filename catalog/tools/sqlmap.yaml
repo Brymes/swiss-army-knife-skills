@@ -1,0 +1,66 @@
+id: sqlmap
+name: sqlmap
+kind: cli
+status: verified
+description: >-
+  Automatic SQL-injection detection and exploitation tool. Verified independently after it reports;
+  a sqlmap hit is a lead until a control request confirms it.
+license: GPL-2.0
+homepage: https://github.com/sqlmapproject/sqlmap
+domains:
+  - web
+  - api
+phases:
+  - exploit
+  - verify
+modes:
+  - blackbox
+intensity: brute
+roles:
+  - fallback
+  - brute
+ranking:
+  impact: 5
+  reliability: 4
+  stealth: 1
+  effort: 3
+  noise: 5
+tags:
+  - reserved
+  - injection
+requires:
+  - sqlmap
+install:
+  command: brew install sqlmap
+  manager: brew
+run:
+  command: sqlmap
+  args:
+    - -u
+    - "{target}"
+    - --batch
+    - --level=1
+    - --risk=1
+    - --technique=BE
+    - --output-dir
+    - "{output}"
+adapter: null
+outputs:
+  - session log under the output directory
+evidence:
+  - request/response pair for the injectable parameter plus a benign control value
+safety:
+  active: true
+  intrusive: true
+  destructive: false
+  notes: >-
+    Project policy keeps this GPL-2.0 tool external: it is run from the host as a binary, never
+    vendored or bundled. Brute reserve. Keep `--risk=1` and
+    `--level=1`; risk 3 payloads can update or delete data. Never use `--dump-all` on a live target.
+sources:
+  - url: https://github.com/sqlmapproject/sqlmap
+    license: GPL-2.0
+    note: COPYING ships GPL-2.0; license is not declared in the GitHub API metadata.
+notes: >-
+  In reserve because payloads are noisy and state-changing at higher risk levels. Prefer a hand
+  probe first and use sqlmap to widen the confirmed injection.

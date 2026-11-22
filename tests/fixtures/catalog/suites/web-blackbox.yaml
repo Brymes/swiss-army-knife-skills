@@ -1,0 +1,27 @@
+id: web-blackbox
+name: Fixture web black-box
+description: Offline fixture suite used by catalog and plan tests.
+profile: web-blackbox
+domains:
+  - web
+  - api
+filters:
+  kinds:
+    - cli
+    - skill
+  statuses:
+    - verified
+  domains:
+    - web
+    - api
+  modes:
+    - blackbox
+budget:
+  primary: 2
+  support: 1
+  fallback: 1
+  brute: 1
+targets:
+  default_port: 8765
+  scope_required: true
+notes: Fixture suite; no live targets.

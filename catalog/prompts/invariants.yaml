@@ -1,0 +1,649 @@
+prompts:
+  - id: INV-01
+    title: Enforcement gap between layers
+    category: invariant
+    description: "find places where the app is supposed to enforce something, but doesn't actually enforce it."
+    applies_to: [web-app, api, source-code, local-fixture]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The threat model names a protected asset and more than one entry path (UI, API, job, import, admin, cache).
+    prompt: |
+      You are an invariant hunter working only inside the authorized scope. Your invariant is
+      "every path that changes or reveals the protected asset enforces the same authorization and
+      validation rule".
+
+      Build a three-column map before you test: the asset, every path that reaches it, and the layer
+      that is supposed to enforce the rule (edge, controller, service, query, database, job, cache).
+      Mark each cell as enforced, partial or absent, citing source file and line when source is in
+      scope.
+
+      Then choose the cheapest path whose enforcement is absent or partial. Send one minimized
+      request that should be rejected by the rule but reaches the asset. Compare it with a control
+      request through the enforced path using the same identity, and note exactly which layer
+      differed. Do not stack payloads; change one variable per request.
+
+      Return bounded hypotheses only. For each hypothesis give: asset, trust boundary crossed,
+      invariant, suspected violation, cheapest test, expected evidence, stop condition. Rank by
+      cheapest test first. If the first test disproves the gap, say so and move to the next path.
+    inputs: [scope.md, threat-model.md, source tree or API collection, test identities]
+    mutations:
+      - Call the internal API route directly with the same session the UI uses and omit the UI-only guard field.
+      - Replay a browser request against the service port that bypasses the edge middleware.
+      - Submit through a bulk, import or job path that shares the model but not the controller.
+      - Change a cached object through an alternate verb (PATCH or PUT) that maps to the same handler.
+      - Reach the same row through an admin read endpoint with a lower-privileged session.
+    evidence:
+      - Exact request and response for both the bypass and the control path.
+      - Source trace naming the enforcing and non-enforcing layers.
+      - Before and after state of the protected asset, or a diff of what each identity can read.
+      - Timestamp, target host, identity label and scope file line that authorizes the host.
+    stop_conditions:
+      - Stop at the first reproducible state change or protected read; do not enumerate further rows.
+      - Stop if the only working path needs a destructive write, denial of service or production data.
+      - Stop if the target host is not named in scope.md.
+      - Stop before touching another real user's account; use the fixture identities.
+    safety:
+      - Authorized targets only; active requests need a scope file naming the host.
+      - Use the local fixture for proof whenever it reproduces the gap.
+      - Do not dump full tables; read the minimum row that proves the gap.
+    tags: [authorization, trust-boundary, layer-bypass]
+    source: sak invariant set
+    notes: Pairs with VIBE-05 and VIBE-13.
+
+  - id: INV-02
+    title: Inconsistent enforcement of one rule
+    category: invariant
+    description: "find security rules that are enforced in one part of the app, but just assumed to be true in another."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Several endpoints edit the same object, or several tenants share one policy helper.
+    prompt: |
+      You are an invariant hunter. Your invariant is "one policy, one outcome". The same actor,
+      resource and action must receive the same decision from every endpoint that implements the
+      policy.
+
+      Enumerate the endpoints that share the policy: read, list, create, edit, delete, export,
+      preview, search and bulk variants. For each, record the policy inputs it checks (identity,
+      role, tenant, ownership, state, field allowlist) and the order it checks them. Use source when
+      available; otherwise infer from controlled requests.
+
+      Build a decision matrix with the same identity and resource in every cell. The interesting
+      cells are not random failures but pairs that disagree: edit allows what delete denies, list
+      filters what search leaks, preview skips what read enforces. Test the cheapest disagreeing
+      pair first, one variable at a time, and keep a benign control.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State the policy helper you believe is
+      missing or misapplied, and cite the file and line when source is in scope.
+    inputs: [scope.md, threat-model.md, route inventory, policy/guard source]
+    mutations:
+      - Request the same object through list, search, export and preview with one identity.
+      - Use PATCH on a field that PUT validates, and PUT on a field that PATCH validates.
+      - Call the batch endpoint with one authorized item and one item owned by another identity.
+      - Trigger the same action through the admin console route and the public API route.
+      - Supply a tenant header on one endpoint and derive tenancy from the session on another.
+    evidence:
+      - Decision matrix showing the disagreeing pair and the identical inputs.
+      - The helper or branch responsible for the difference.
+      - Minimal request and response for the permissive endpoint plus the denying control.
+    stop_conditions:
+      - Stop at the first pair that disagrees on a protected asset.
+      - Do not brute force identifiers or fields to find a disagreement.
+      - Do not test destructive actions on shared or production resources.
+      - Stop if a disagreement only exists across two different real users.
+    safety:
+      - Authorized targets only; prefer the local fixture.
+      - Keep requests read-only until a write is the cheapest proof.
+      - Never print session cookies or tokens; refer to identities by label.
+    tags: [authorization, consistency, policy]
+    source: sak invariant set
+    notes: Compare read versus edit versus delete before attempting any write.
+
+  - id: INV-03
+    title: Unchecked client assumption
+    category: invariant
+    description: "find security assumptions the app relies on, but never actually checks or enforces."
+    applies_to: [web-app, api, mobile-api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The request body or headers carry identity, ownership or policy attributes that the UI also displays.
+    prompt: |
+      You are an invariant hunter. Your invariant is "security-relevant attributes are derived on
+      the server from authenticated state, never accepted from the client".
+
+      List every client-controlled field that maps to a security decision: role, plan, tenant,
+      owner, account status, quota, credit, price, discount, approval flag, redirect target and
+      visibility. For each, find the server sink that consumes it. Mark the sink as derived,
+      validated against server state, or trusted.
+
+      Test the cheapest trusted sink with the smallest possible change: one field, one request,
+      one identity. Keep a control request with the original value. Confirm the change is persisted
+      and observable through a second read, not merely echoed in the response. Prefer a harmless
+      value that demonstrates the trust boundary, not the most damaging value.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. If a field is ignored server-side, record
+      that as a disproof rather than retrying variants.
+    inputs: [scope.md, threat-model.md, captured requests, profile/update source]
+    mutations:
+      - Add a role or plan field to a profile update that the UI sends without it.
+      - Change the owner or tenant identifier in a create request.
+      - Set a credit, quota or price field to a benign boundary value.
+      - Send an approval or visibility flag as true where the UI forces false.
+      - Supply an account status field during signup or email change.
+    evidence:
+      - Request showing the injected field and response showing acceptance.
+      - Second read proving persistence through server-derived state.
+      - Source trace of the mass-assignment or missing allowlist.
+      - Control request with the original value and the same identity.
+    stop_conditions:
+      - Stop after one persisted privilege or ownership change; do not climb further.
+      - Do not change another real user's role, balance or account state.
+      - Do not use destructive or financially harmful values; boundary values only.
+      - Stop if validation requires production data to observe.
+    safety:
+      - Authorized targets only; fixture identities and synthetic values.
+      - Never inflate a real balance, quota or credit.
+      - Mask tokens, cookies and personal data in notes.
+    tags: [mass-assignment, trust-boundary, client-input]
+    source: sak invariant set
+    notes: Pairs with VIBE-03.
+
+  - id: INV-04
+    title: Undocumented behavior
+    category: invariant
+    description: "find places where the app depends on undocumented behavior, and what happens if that behavior changes."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: support
+    intensity: normal
+    when_to_use: Source or a route dump is available and the documented API is smaller than the implemented one.
+    prompt: |
+      You are an invariant hunter. Your invariant is "the observable attack surface equals the
+      documented and intended surface, or every extra path enforces the same controls".
+
+      Diff three inventories: the public documentation, the framework route table and the source
+      handlers. Flag handlers with no documentation, debug or test routes reachable outside
+      development, legacy verbs, hidden form fields, undocumented query parameters, alternate
+      content types and feature-flag branches.
+
+      For each candidate, determine whether it is reachable with a normal identity and whether it
+      enforces the controls of its documented sibling. Test the cheapest reachable candidate with a
+      benign read. Do not fuzz the whole route space; the goal is a reasoned diff, not a scan.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. Include the evidence that the route is
+      genuinely undocumented or unintended, such as a missing router entry, a comment or a disabled
+      feature flag.
+    inputs: [scope.md, threat-model.md, route table, OpenAPI or docs, source tree]
+    mutations:
+      - Request a handler that exists in the router but not in the docs.
+      - Add an undocumented query parameter that selects a different serializer.
+      - Use a legacy verb or content type against a documented path.
+      - Reach a debug or test route with a normal session.
+      - Toggle a feature flag through an undocumented parameter.
+    evidence:
+      - Route table entry and source location for the extra handler.
+      - Request and response proving reachability with a normal identity.
+      - Comparison with the documented sibling's controls.
+    stop_conditions:
+      - Stop at the first reachable undocumented path with a security-relevant effect.
+      - Do not run a wordlist or route fuzzer against a live host.
+      - Do not enable debug features that weaken the target or expose secrets.
+      - Stop if the path is documented after all; record the disproof.
+    safety:
+      - Authorized targets only; source review first, requests second.
+      - Do not trigger maintenance, migration or debug actions.
+      - Redact any secret or personal data returned by an accidental hit.
+    tags: [attack-surface, documentation-drift, routes]
+    source: sak invariant set
+    notes: Use the framework route table rather than blind fuzzing.
+
+  - id: INV-05
+    title: Composition and chaining
+    category: invariant
+    description: "find operations that are secure on their own, but become vulnerable when you combine or chain them together."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The threat model lists several weak controls, or each step is low impact alone.
+    prompt: |
+      You are an invariant hunter. Your invariant is "the composition of permitted operations cannot
+      produce a state that no single operation is allowed to produce".
+
+      Model the system as state transitions. List the operations a normal identity may perform and
+      the state each one changes: create, invite, share, rename, verify, reset, transfer, archive,
+      restore, export, preview and delete. Look for pairs or triples whose combined effect crosses a
+      trust boundary even though each step passes its own check.
+
+      Choose the shortest chain with the cheapest first step. Execute one step per request, record
+      the state after each step, and keep a control chain with a benign value. Stop as soon as the
+      composed state violates the invariant; do not continue to a more damaging end state.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. For each chain, state the exact
+      intermediate state that makes the next step possible.
+    inputs: [scope.md, threat-model.md, state model, test identities]
+    mutations:
+      - Invite a controlled identity, change its email, then use the original invitation.
+      - Create a resource as one identity, transfer ownership, then restore from a stale preview.
+      - Verify a value, change the identifier, then consume the still-valid verification.
+      - Share a resource, revoke the share, then read through a cached or derived identifier.
+      - Delete a parent, recreate it, then act on a child that still references the old parent.
+    evidence:
+      - Ordered request log with the state observed after each step.
+      - The intermediate state that should have invalidated the next step.
+      - Source trace of the missing invalidation or re-check.
+      - Control chain showing the same steps with a benign value do not cross the boundary.
+    stop_conditions:
+      - Stop at the first composed violation; do not escalate to full account takeover.
+      - Do not involve a real second person; use fixture identities.
+      - Do not delete or transfer shared production resources.
+      - Stop if a step needs a destructive action to reach the next state.
+    safety:
+      - Authorized targets only; fixture identities and reversible state changes.
+      - Record rollback steps before the first write.
+      - Never exfiltrate data beyond the minimum proof.
+    tags: [chaining, state-machine, composition]
+    source: sak invariant set
+    notes: The cheapest chain usually starts with a read or a stale token.
+
+  - id: INV-06
+    title: Multi-path permission differences
+    category: invariant
+    description: "find cases where the same object can be accessed in different ways, but each way ends up having different permissions."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: An object has several verbs and at least one of them is rarely used.
+    prompt: |
+      You are an invariant hunter. Your invariant is "authorization for one object is consistent
+      across read, list, edit, delete, export, preview, duplicate and restore".
+
+      For one protected object, enumerate every verb and every representation: JSON, HTML, CSV,
+      PDF, image, thumbnail, activity feed and audit log. Record the authorization decision for the
+      same identity and object in each. Pay attention to verbs implemented by a different service,
+      a background job or a client-side guard.
+
+      Test the cheapest permissive verb first, preferably a read or preview. Prove access with the
+      minimum data and compare it with a verb that correctly denies. Then check whether the
+      permissive verb also permits a state change. Do not test delete until a read or edit proof
+      shows the object is reachable.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. Name the verb that is the outlier and the
+      code path it uses.
+    inputs: [scope.md, threat-model.md, object identifiers, verb inventory]
+    mutations:
+      - Read an object through preview when direct read denies.
+      - Export a filtered list through CSV when the JSON list filters correctly.
+      - Fetch a thumbnail or derived asset that skips the parent check.
+      - Duplicate an object you can read but not edit.
+      - Restore an archived object you no longer own.
+    evidence:
+      - Verb-by-verb decision matrix for one object and one identity.
+      - Minimal response body or header proving the permissive verb.
+      - Source trace of the divergent guard.
+    stop_conditions:
+      - Stop at the first permissive read or preview; do not test delete on the same object.
+      - Do not download bulk exports or full-resolution personal media.
+      - Do not act on another real user's object.
+      - Stop if the permissive verb only works on the tester's own object.
+    safety:
+      - Authorized targets only; one object, minimum data.
+      - Prefer preview and metadata over full content.
+      - Delete and restore only on fixture-created objects.
+    tags: [authorization, verbs, object-access]
+    source: sak invariant set
+    notes: Preview and export are the usual outliers.
+
+  - id: INV-07
+    title: Identity rebinding
+    category: invariant
+    description: "find objects whose identity can be changed or rebound to another user, without going through the right checks."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Email, phone, username, OAuth subject or tenant can be changed after verification.
+    prompt: |
+      You are an invariant hunter. Your invariant is "trust granted to an identity is invalidated
+      when the identifier behind that identity changes".
+
+      Map the identity lifecycle: signup, verify, login, change email or phone, link or unlink an
+      OAuth account, join or leave a tenant, rename a username, reset a password and revoke a
+      session. For each transition, list the tokens, sessions, invitations, shares and cached
+      permissions that survive it.
+
+      Test a benign rebinding: verify a controlled identifier, change it to a second controlled
+      identifier, then use the pre-change token or session. Keep a control where no rebinding
+      happens. Prove that the old artifact still resolves to the new identifier, or that the new
+      identifier inherits the old trust.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State exactly which artifact should have
+      been revoked and was not.
+    inputs: [scope.md, threat-model.md, identity lifecycle, controlled mailboxes]
+    mutations:
+      - Change the account email, then reuse the pre-change reset or verification token.
+      - Unlink an OAuth identity and log in with the old linked subject.
+      - Rename a username, then use a share addressed to the old name.
+      - Move to another tenant, then read data cached under the old tenant.
+      - Revoke a session, then replay a derived token minted before revocation.
+    evidence:
+      - Ordered request log showing the identifier change and the reused artifact.
+      - The token or session identifier before and after, with secrets masked.
+      - Source trace of the missing revocation or cache invalidation.
+    stop_conditions:
+      - Stop at the first artifact that survives rebinding.
+      - Use only controlled mailboxes and fixture accounts.
+      - Do not rebind a real user's email, phone or OAuth identity.
+      - Stop if the test would lock a real account out.
+    safety:
+      - Authorized targets only; controlled identities.
+      - Do not send mail or SMS to third parties.
+      - Mask tokens, addresses and phone numbers.
+    tags: [identity, rebinding, revocation]
+    source: sak invariant set
+    notes: Pairs with VIBE-04 and VIBE-12.
+
+  - id: INV-08
+    title: Failed-request side effects
+    category: invariant
+    description: "find requests that get rejected or fail, but still end up changing something or triggering a side effect."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: A handler performs multiple writes, calls an external service, or returns an error after committing.
+    prompt: |
+      You are an invariant hunter. Your invariant is "a request that reports failure leaves no
+      security-relevant state behind, or the partial state is explicitly recoverable".
+
+      Trace multi-step handlers: create plus invite, upload plus index, charge plus credit, delete
+      plus audit, update plus notify. Identify the commit point and the points that can fail after
+      it: validation, serialization, downstream HTTP, queue publish, email send or response write.
+
+      Induce the cheapest post-commit failure with a controlled input: an invalid trailing field, an
+      unsupported content type, a downstream timeout you can trigger safely, or a response the
+      client aborts. Then read the state through a second request and compare it with a successful
+      control. Do not use resource exhaustion or malformed traffic that could destabilize the host.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. Include the exact commit point and the
+      failing step.
+    inputs: [scope.md, threat-model.md, handler source, controlled downstream]
+    mutations:
+      - Append an invalid field after the write in a multi-field update.
+      - Abort the client read while the server continues a create.
+      - Make a notification or webhook receiver fail after the primary write.
+      - Send a content type that passes validation but fails serialization.
+      - Trigger a duplicate-key error after a partial insert.
+    evidence:
+      - Request that returned an error plus a second read showing the write persisted.
+      - Source trace of the commit point and the failing step.
+      - Successful control request with the same payload minus the failing field.
+    stop_conditions:
+      - Stop at the first persisted side effect; do not repeat the failure in a loop.
+      - Do not induce timeouts by flooding or exhausting resources.
+      - Do not leave orphaned records; remove fixture-created state if the fixture supports cleanup.
+      - Stop if the only proof requires a real payment or email to a third party.
+    safety:
+      - Authorized targets only; synthetic values.
+      - No denial-of-service, flood or resource-exhaustion technique.
+      - Record cleanup steps before inducing the failure.
+    tags: [transactions, partial-write, error-handling]
+    source: sak invariant set
+    notes: The error response is the claim; the second read is the evidence.
+
+  - id: INV-09
+    title: Order-dependent checks
+    category: invariant
+    description: "find security checks that only work if certain events happen in a specific order, and what happens if that order changes."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: A handler validates, then waits, then writes; or two requests race on the same resource.
+    prompt: |
+      You are an invariant hunter. Your invariant is "every authorization and validation check is
+      evaluated against the state it protects at the moment of the protected action".
+
+      Find check-then-act sequences: read ownership then write, validate quota then consume, verify
+      token then redeem, check status then transition. Note awaits, queue hops, cache reads and
+      client-side gates between the check and the act. A check that runs only at creation or only in
+      the UI is also order-dependent.
+
+      Test with two carefully ordered requests from controlled identities, not a flood. For a race,
+      use the smallest number of concurrent requests that can demonstrate the window, and stop
+      after one observed violation. For a stale check, change the state between the check and the
+      act using a normal operation.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State the exact window and what changes
+      inside it.
+    inputs: [scope.md, threat-model.md, handler source, controlled identities]
+    mutations:
+      - Start an edit, revoke access, then complete the edit.
+      - Validate a quota, consume it elsewhere, then submit the original request.
+      - Redeem a token twice with two concurrent requests.
+      - Change an object's owner between preview and save.
+      - Pass the UI check, then replay the request after the resource is disabled.
+    evidence:
+      - Ordered or concurrent request log with timestamps.
+      - State observed inside and after the window.
+      - Source trace of the check and the later act.
+      - Proof that a single sequential request is rejected.
+    stop_conditions:
+      - Stop after one observed violation; do not stress the endpoint.
+      - Use at most two concurrent requests and never a sustained race.
+      - Do not target shared production state.
+      - Stop if the window cannot be hit without load.
+    safety:
+      - Authorized targets only; bounded concurrency, no flooding.
+      - Prefer deterministic state changes over timing races.
+      - Clean up fixture-created state.
+    tags: [race-condition, toctou, ordering]
+    source: sak invariant set
+    notes: Bounded concurrency is a safety limit, not a performance test.
+
+  - id: INV-10
+    title: Rollback side effects
+    category: invariant
+    description: "find operations where the transaction fails or rolls back, but some of the side effects still happen."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: support
+    intensity: normal
+    when_to_use: The system compensates failed payments, cancellations, restores, undo actions or soft deletes.
+    prompt: |
+      You are an invariant hunter. Your invariant is "a rollback restores exactly the state that
+      existed before the operation, and nothing else".
+
+      Enumerate compensating actions: refund, cancel, undo, restore, revert, retry, soft-delete and
+      archive. For each, list the primary effects and the effects the compensation actually
+      reverses. Look for audit entries, notifications, counters, shares, derived assets and cached
+      permissions that are not restored or are restored twice.
+
+      Test the cheapest reversible operation on a fixture-created object: create, mutate, roll back,
+      then compare a full before and after snapshot. A second rollback is a useful check for
+      double-compensation. Do not roll back a real payment, subscription or another user's action.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State the effect that survives the
+      rollback.
+    inputs: [scope.md, threat-model.md, compensation source, fixture object]
+    mutations:
+      - Cancel an operation and check whether the audit entry or notification remains.
+      - Roll back a profile change and check whether derived caches still show the new value.
+      - Restore a deleted object and check whether old shares become active again.
+      - Run the compensating action twice and compare counters.
+      - Refund a synthetic charge and check whether quota or credit is restored twice.
+    evidence:
+      - Before and after snapshot of the object and its derived state.
+      - Request log for the primary action and the compensation.
+      - Source trace of the compensation path.
+    stop_conditions:
+      - Stop at the first surviving or duplicated effect.
+      - Never roll back a real payment, order or subscription.
+      - Do not send notifications to third parties.
+      - Stop if rollback is irreversible on the target.
+    safety:
+      - Authorized targets only; fixture-created objects.
+      - Synthetic amounts and identities only.
+      - Record the expected final state before starting.
+    tags: [rollback, compensation, consistency]
+    source: sak invariant set
+    notes: Double compensation is often easier to prove than a missing restore.
+
+  - id: INV-11
+    title: Post-deletion or revocation access
+    category: invariant
+    description: "find things you can still do with an object even after it has been deleted, or access to it has been revoked."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Resources can be deleted, archived, revoked or unshared, and copies exist in caches, exports or tokens.
+    prompt: |
+      You are an invariant hunter. Your invariant is "deletion or revocation removes every path to
+      the resource within the stated propagation window".
+
+      List the copies and handles that outlive the primary record: session tokens, signed URLs,
+      share links, preview links, API keys, caches, search indexes, thumbnails, exports, backups and
+      audit views. Record the documented propagation window, or note that none is documented.
+
+      Create a fixture resource, obtain the cheapest handle, delete or revoke the resource, then try
+      the handle and a direct read. Compare with a control resource that was never shared. Wait only
+      as long as the documented window; do not poll aggressively. If no window is documented, test
+      once immediately and once after a short, bounded delay.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State which copy or handle survived.
+    inputs: [scope.md, threat-model.md, deletion/revocation source, fixture resource]
+    mutations:
+      - Open a signed URL after the object is deleted.
+      - Use a share link after the share is revoked.
+      - Read a search or feed entry after the source is removed.
+      - Replay an API token after the key is revoked.
+      - Fetch a preview or thumbnail after the parent is deleted.
+    evidence:
+      - Handle captured before deletion and the response after deletion.
+      - Timestamp of deletion, revocation and the surviving read.
+      - Documentation or source stating the expected propagation window.
+    stop_conditions:
+      - Stop at the first surviving handle.
+      - Do not test deletion on real user content or shared production resources.
+      - Do not poll for minutes or run a background watcher.
+      - Stop if the documented propagation window has not elapsed and the read succeeds.
+    safety:
+      - Authorized targets only; fixture-created resources.
+      - One bounded retry after the documented window, never a poll loop.
+      - Mask signed URLs and tokens in notes.
+    tags: [deletion, revocation, cache]
+    source: sak invariant set
+    notes: Capture the handle before deleting so the proof is unambiguous.
+
+  - id: INV-12
+    title: Unauthorized state reversal
+    category: invariant
+    description: "find state changes that can be reversed or undone by someone who shouldn't have permission to do so."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: Objects have approve, publish, archive, restore, close, reopen or undo actions.
+    prompt: |
+      You are an invariant hunter. Your invariant is "only an identity authorized for a transition
+      may reverse it, and reversal cannot be used to overwrite another identity's decision".
+
+      List state transitions and their inverses: approve and revoke, publish and unpublish, archive
+      and restore, close and reopen, lock and unlock, accept and decline. For each, record who may
+      perform the forward action and who may perform the inverse. Look for inverse actions that
+      check ownership of the object but not authority over the decision.
+
+      Use two controlled identities. Identity A performs a legitimate forward transition; identity
+      B attempts the inverse. Test the cheapest inverse (reopen, unpublish, unarchive) and a benign
+      object. Confirm with a read as A. Do not reverse a real moderator or administrator decision.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State the decision that was overwritten.
+    inputs: [scope.md, threat-model.md, transition source, two controlled identities]
+    mutations:
+      - Reopen an item another identity closed.
+      - Unpublish content another identity published.
+      - Restore an item another identity archived.
+      - Revoke an approval another identity granted.
+      - Unlock a record another identity locked.
+    evidence:
+      - Forward action by A and inverse action by B, with responses.
+      - Read as A showing the reversed state.
+      - Source trace of the inverse authorization.
+    stop_conditions:
+      - Stop at the first reversed transition.
+      - Use fixture identities and fixture-created objects only.
+      - Do not reverse a real administrative or safety decision.
+      - Stop if the inverse action notifies or harms a third party.
+    safety:
+      - Authorized targets only; two controlled identities.
+      - Reversible fixture objects only.
+      - Do not send notifications.
+    tags: [state, authorization, reversal]
+    source: sak invariant set
+    notes: The inverse action is often added later and misses the decision owner.
+
+  - id: INV-13
+    title: Contradictory states
+    category: invariant
+    description: "find objects that can end up in two contradictory states at the same time, and what operations become possible because of that."
+    applies_to: [web-app, api, source-code]
+    domains: [web, api, source]
+    hunter_role: primary
+    intensity: normal
+    when_to_use: The system has a cache, replica, search index, client store or audit projection alongside the primary database.
+    prompt: |
+      You are an invariant hunter. Your invariant is "when two sources of truth disagree, every
+      security decision uses the authoritative source or refuses the action".
+
+      Map the sources: primary database, read replica, cache, search index, client store, session
+      snapshot and audit projection. For each security-relevant field (role, ownership, status,
+      tenant, ban, quota, verification), note which source each check reads and how the sources
+      synchronize.
+
+      Create a controlled disagreement: change a field through the primary write path, then read it
+      through the stale path before synchronization completes. Keep the change benign and
+      reversible. Test whether a decision made from the stale path grants access that the
+      authoritative source denies. Do not induce replication lag with load.
+
+      Return bounded hypotheses with asset, trust boundary, invariant, suspected violation,
+      cheapest test, expected evidence and stop condition. State both values and which one the
+      decision used.
+    inputs: [scope.md, threat-model.md, data-flow map, fixture object]
+    mutations:
+      - Change a role, then act through a session that reads a cached role.
+      - Revoke access, then read through a replica or search index.
+      - Ban an identity, then act through a token that carries the old status.
+      - Change a tenant, then read a document indexed under the old tenant.
+      - Update a quota, then consume through the stale counter.
+    evidence:
+      - Both observed values with the read path for each.
+      - The decision that used the stale value and its response.
+      - Source trace of the cache, replica or snapshot read.
+    stop_conditions:
+      - Stop at the first security decision made from stale data.
+      - Do not create replication lag with load or repeated writes.
+      - Do not use real user state.
+      - Stop if the disagreement is only an expected, documented eventual-consistency window with no security effect.
+    safety:
+      - Authorized targets only; benign, reversible field changes.
+      - One write and a bounded read, no polling loop.
+      - Mask identifiers and tokens.
+    tags: [cache, consistency, sources-of-truth]
+    source: sak invariant set
+    notes: Documented eventual consistency is not a finding unless a decision trusts it.

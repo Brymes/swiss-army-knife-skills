@@ -1,0 +1,71 @@
+id: nuclei
+name: Nuclei
+kind: cli
+status: verified
+description: >-
+  Template-driven HTTP scanner for authorized web and API assessment. The sak adapter
+  pins severity, rate, timeout and retry controls, disables interactsh by default and
+  normalizes JSONL into candidate findings.
+homepage: https://github.com/projectdiscovery/nuclei
+license: MIT
+version: ">=3.0"
+domains:
+  - web
+  - api
+phases:
+  - scan
+  - verify
+modes:
+  - blackbox
+  - greybox
+intensity: normal
+roles:
+  - primary
+  - triage
+ranking:
+  impact: 5
+  reliability: 5
+  stealth: 2
+  effort: 2
+  noise: 4
+tags:
+  - nuclei
+  - templates
+  - http
+  - scan
+  - jsonl
+requires:
+  - nuclei
+install:
+  command: brew install nuclei
+  manager: brew
+  notes: >-
+    Alternative: go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest.
+    Template updates (nuclei -update-templates) are a manual operator action, never run by sak.
+run:
+  command: sak run --run RUN_DIR --step nuclei --dry-run
+  notes: Dry run by default; --execute needs scope.md and an active plan step.
+adapter: nuclei
+outputs:
+  - jsonl
+evidence:
+  - template-id
+  - matched-at
+  - severity
+safety:
+  active: true
+  intrusive: false
+  destructive: false
+  notes: >-
+    Active HTTP requests against the authorized target only. Interactsh/OAST callbacks are
+    off unless a step opts in, and rate, timeout and retry values are bounded by step options.
+sources:
+  - url: https://github.com/projectdiscovery/nuclei
+    license: MIT
+    note: Upstream project; installed by the operator, never vendored.
+notes: >-
+  Verified against fake-fixture JSONL tests only; execute runs against the plan target after the
+  scope and budget gates. Templates must be existing local paths, update checks are disabled and
+  no raw capture is retained. Templates, updates and live targets are operator responsibilities;
+  the adapter never installs or updates anything. Parser: adapters/nuclei.py (parse), JSONL
+  normalized to needs_validation candidates through sak run.

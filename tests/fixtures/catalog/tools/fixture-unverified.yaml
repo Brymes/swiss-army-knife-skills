@@ -1,0 +1,21 @@
+id: fixture-unverified
+name: Unverified High Score
+kind: cli
+status: unverified
+description: Scores highest but must be excluded because it is not verified.
+license: MIT
+domains:
+  - web
+phases:
+  - scan
+modes:
+  - blackbox
+intensity: normal
+ranking:
+  impact: 5
+  reliability: 5
+  stealth: 5
+  effort: 1
+  noise: 1
+requires:
+  - python3

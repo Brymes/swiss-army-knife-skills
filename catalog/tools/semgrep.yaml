@@ -1,0 +1,63 @@
+id: semgrep
+name: Semgrep
+kind: cli
+status: verified
+description: >-
+  Pattern-based static analysis across many languages. Primary source-code scanner for taint-like
+  patterns, dangerous APIs and framework-specific mistakes.
+license: LGPL-2.1
+homepage: https://semgrep.dev/
+domains:
+  - source
+phases:
+  - scan
+  - verify
+modes:
+  - source
+  - whitebox
+intensity: normal
+roles:
+  - primary
+  - triage
+ranking:
+  impact: 5
+  reliability: 4
+  stealth: 5
+  effort: 2
+  noise: 2
+tags:
+  - sast
+requires:
+  - semgrep
+install:
+  command: brew install semgrep
+  manager: brew
+run:
+  command: semgrep
+  args:
+    - scan
+    - --config
+    - p/default
+    - --json
+    - --output
+    - "{output}/semgrep.json"
+    - "{target}"
+adapter: null
+outputs:
+  - JSON findings with file, line, rule and message
+evidence:
+  - "source trace: file, function and call path, plus the rule that matched"
+safety:
+  active: false
+  intrusive: false
+  destructive: false
+  notes: >-
+    Reads source only. Do not send private code to a hosted service: use local rules and
+    `--metrics=off`. LGPL-2.1 engine; project policy keeps it an external binary and it is never
+    vendored.
+sources:
+  - url: https://github.com/semgrep/semgrep
+    license: LGPL-2.1
+    note: OSS engine; the commercial registry and platform are separate.
+notes: >-
+  A match is a lead, not a finding: confirm reachability and attacker control before promoting it.

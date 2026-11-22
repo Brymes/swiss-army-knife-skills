@@ -1,0 +1,27 @@
+id: fixture-gamma
+name: Gamma Exploiter
+kind: cli
+status: verified
+description: Noisy fixture exploiter used for support-role assertions.
+license: MIT
+domains:
+  - web
+phases:
+  - exploit
+modes:
+  - blackbox
+intensity: normal
+roles:
+  - support
+ranking:
+  impact: 4
+  reliability: 3
+  stealth: 2
+  effort: 3
+  noise: 4
+requires:
+  - python3
+safety:
+  active: true
+  intrusive: true
+  notes: Fixture only; do not execute.

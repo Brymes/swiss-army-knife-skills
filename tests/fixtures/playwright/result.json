@@ -1,0 +1,143 @@
+{
+  "schema_version": "1",
+  "runner": "sak-playwright-runner",
+  "scenario": "/opt/sak/tests/fixtures/playwright/run/scenario.json",
+  "target": "http://localhost:8765",
+  "started_at": "2026-11-15T12:00:00.000Z",
+  "finished_at": "2026-11-15T12:00:04.000Z",
+  "timed_out": false,
+  "ok": false,
+  "error": null,
+  "initial": {
+    "url": "http://localhost:8765/",
+    "title": "Fixture app",
+    "status": 200
+  },
+  "browser": {"name": "chromium", "version": "999.0.0-fixture"},
+  "steps": [
+    {
+      "index": 1,
+      "action": "goto",
+      "status": "passed",
+      "url": "http://localhost:8765/login",
+      "title": "Login",
+      "status_code": 200,
+      "selected_text": null,
+      "detail": "navigated to http://localhost:8765/login",
+      "error": null,
+      "screenshot": null
+    },
+    {
+      "index": 2,
+      "action": "fill",
+      "status": "passed",
+      "url": "http://localhost:8765/login",
+      "title": "Login",
+      "status_code": 200,
+      "selected_text": null,
+      "detail": "filled a field; the value is not recorded",
+      "error": null,
+      "screenshot": null
+    },
+    {
+      "index": 3,
+      "action": "click",
+      "status": "passed",
+      "url": "http://localhost:8765/login",
+      "title": "Login",
+      "status_code": 200,
+      "selected_text": null,
+      "detail": null,
+      "error": null,
+      "screenshot": null
+    },
+    {
+      "index": 4,
+      "action": "goto",
+      "status": "passed",
+      "url": "http://localhost:8765/missing",
+      "title": "Not found",
+      "status_code": 404,
+      "selected_text": null,
+      "detail": "navigated to http://localhost:8765/missing",
+      "error": null,
+      "screenshot": null
+    },
+    {
+      "index": 5,
+      "action": "expect_text",
+      "status": "failed",
+      "url": "http://localhost:8765/missing",
+      "title": "Not found",
+      "status_code": 404,
+      "selected_text": "Sign in failed",
+      "detail": null,
+      "error": "text \"Welcome\" was not found in #welcome",
+      "screenshot": null
+    },
+    {
+      "index": 6,
+      "action": "screenshot",
+      "status": "passed",
+      "url": "http://localhost:8765/missing",
+      "title": "Not found",
+      "status_code": 404,
+      "selected_text": null,
+      "detail": null,
+      "error": null,
+      "screenshot": "<run_dir>/artifacts/playwright/after-login.png"
+    }
+  ],
+  "cookies": [
+    {
+      "name": "PHPSESSID",
+      "domain": "localhost",
+      "path": "/",
+      "http_only": true,
+      "secure": false,
+      "same_site": "Lax",
+      "expires": -1
+    },
+    {
+      "name": "security",
+      "domain": "localhost",
+      "path": "/",
+      "http_only": false,
+      "secure": false,
+      "same_site": "Lax",
+      "expires": -1
+    }
+  ],
+  "console_errors": [
+    {"step": 3, "type": "console", "text": "Failed to load resource: 403"}
+  ],
+  "observations": [
+    {
+      "kind": "http_error",
+      "severity": "low",
+      "title": "HTTP 404 after goto",
+      "step": 4,
+      "action": "goto",
+      "url": "http://localhost:8765/missing",
+      "detail": "the target answered 404",
+      "observed": 404
+    },
+    {
+      "kind": "expectation_failed",
+      "severity": "medium",
+      "title": "Expectation failed: expect_text",
+      "step": 5,
+      "action": "expect_text",
+      "url": "http://localhost:8765/missing",
+      "detail": "text \"Welcome\" was not found in #welcome",
+      "expected": "Welcome",
+      "observed": "Sign in failed",
+      "screenshot": "<run_dir>/artifacts/playwright/after-login.png"
+    }
+  ],
+  "env_names": ["PLAYWRIGHT_FIXTURE_USER", "PLAYWRIGHT_FIXTURE_PASSWORD"],
+  "storage_state": "<run_dir>/artifacts/playwright/storage.json",
+  "notes": [
+    "cookie names and flags only; cookie values are never written to this document"
+  ]
+}

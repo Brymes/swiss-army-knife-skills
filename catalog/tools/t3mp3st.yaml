@@ -1,0 +1,60 @@
+id: t3mp3st
+name: T3MP3ST
+kind: platform
+status: unverified
+description: >-
+  Multi-agent offensive-security war room and CLI. It turns the coding agent you already run, or a
+  local OpenAI-compatible model, into a recon-to-report kill-chain runner over an authorized target.
+license: AGPL-3.0
+homepage: https://github.com/elder-plinius/T3MP3ST
+domains:
+  - web
+  - api
+phases:
+  - recon
+  - discovery
+  - exploit
+  - verify
+  - report
+modes:
+  - blackbox
+intensity: normal
+roles:
+  - support
+  - fallback
+ranking:
+  impact: 5
+  reliability: 3
+  stealth: 3
+  effort: 4
+  noise: 4
+tags:
+  - engine
+  - external
+  - agent
+requires:
+  - node
+  - npm
+install:
+  command: see engines/t3mp3st.yaml (external clone under vendor/external/t3mp3st)
+  manager: npm
+adapter: null
+outputs:
+  - war room mission state at http://127.0.0.1:3333/ui/
+  - mission reports and evidence exports
+evidence:
+  - runs/<run-id>/evidence/
+safety:
+  active: true
+  intrusive: true
+  destructive: false
+  notes: >-
+    AGPL-3.0, external only under the gitignored vendor/external/. War room binds 127.0.0.1:3333.
+    Authorized targets only; missions can run exploit steps, so review the mission plan first.
+sources:
+  - url: https://github.com/elder-plinius/T3MP3ST
+    license: AGPL-3.0
+    note: Never vendor or copy this tree into the repository.
+notes: >-
+  Not required for v1 acceptance. Keyless by default with a connected coding agent, or offline with
+  Ollama/llama.cpp; hosted provider keys are optional and stay in its own .env.

@@ -1,0 +1,4 @@
+Site,URL,Username,Exists,Metadata
+github,https://github.com/fixtureuser,fixtureuser,yes,profile found
+gitlab,https://gitlab.com/fixtureuser,fixtureuser,no,
+reddit,https://www.reddit.com/user/fixtureuser,fixtureuser,true,created 2020

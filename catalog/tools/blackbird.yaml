@@ -1,0 +1,75 @@
+id: blackbird
+name: Blackbird
+kind: cli
+status: experimental
+description: >-
+  External username and email account enumeration across public sites. Blackbird stays
+  outside the repository (GPL-3.0, CC BY-NC-SA site data); the sak adapter checks the
+  checkout and its virtual environment, parses CSV and refuses cleanly when either is missing.
+homepage: https://github.com/p1ngul1n0/blackbird
+license: GPL-3.0
+domains:
+  - web
+  - osint
+phases:
+  - recon
+  - discovery
+modes:
+  - blackbox
+  - passive
+intensity: normal
+roles:
+  - support
+  - triage
+ranking:
+  impact: 3
+  reliability: 3
+  stealth: 3
+  effort: 3
+  noise: 3
+tags:
+  - blackbird
+  - username
+  - email
+  - osint
+  - external
+requires:
+  - git
+  - python3
+install:
+  command: git clone https://github.com/p1ngul1n0/blackbird vendor/external/blackbird
+  manager: git
+  notes: >-
+    Operator-only, manual steps: clone into the gitignored vendor/external/blackbird, create a
+    virtual environment and install upstream requirements. sak prints these hints and never
+    clones, installs or vendors GPL code.
+run:
+  command: sak run --run RUN_DIR --step blackbird --dry-run
+  notes: >-
+    Needs options.username or options.email. Dry run only: --execute is refused because Blackbird's
+    site list, not the plan target, decides the destinations.
+adapter: blackbird
+outputs:
+  - csv
+evidence:
+  - site
+  - url
+  - exists
+safety:
+  active: true
+  intrusive: false
+  destructive: false
+  notes: >-
+    Queries third-party sites about an account identifier, not the plan target. scope.md cannot
+    authorize that destination set, so `sak run --execute` refuses Blackbird; use dry runs and
+    manual validation only. Results are candidates, not confirmed findings.
+sources:
+  - url: https://github.com/p1ngul1n0/blackbird
+    license: GPL-3.0
+    note: External, gitignored checkout; CC BY-NC-SA terms cover the bundled site data.
+notes: >-
+  Dry-run and parser adapter only: the checkout check, username/email command and CSV parser are
+  tested with fake fixtures, and execute is refused because the destinations come from Blackbird's
+  external site list rather than scope.md. The real checkout and Python environment are not
+  installed in this repository by design. Parser: adapters/blackbird.py (parse), CSV rows with
+  exists=yes normalized to needs_validation candidates.

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "nuclei:fixture-sqli:localhost-8765",
+    "title": "Fixture SQL injection",
+    "severity": "high",
+    "status": "needs_validation",
+    "source": "nuclei",
+    "target": "http://127.0.0.1:8765/login",
+    "evidence": {
+      "template": "fixture-sqli",
+      "type": "http",
+      "matcher": "error",
+      "tags": ["sqli", "fixture"]
+    }
+  },
+  {
+    "title": "Admin console reachable without a session",
+    "severity": "medium",
+    "source": "nuclei",
+    "target": "http://127.0.0.1:8765/admin",
+    "evidence": {
+      "template": "admin-panel",
+      "type": "http",
+      "matcher": "status"
+    }
+  }
+]

@@ -1,0 +1,73 @@
+id: webseek
+name: Webseek
+kind: cli
+status: experimental
+description: >-
+  External research CLI and MCP server invoked through npx. Requires Node, a provider and an
+  API key for live queries; the sak adapter parses JSON results with usage/cost fields and
+  never requires a key for a dry run.
+homepage: https://www.npmjs.com/package/webseek
+license: external
+domains:
+  - osint
+  - web
+phases:
+  - recon
+modes:
+  - passive
+intensity: passive
+roles:
+  - fallback
+ranking:
+  impact: 2
+  reliability: 3
+  stealth: 5
+  effort: 2
+  noise: 1
+tags:
+  - webseek
+  - research
+  - search
+  - mcp
+  - npx
+requires:
+  - npx
+  - WEBSEEK_API_KEY
+install:
+  command: npx --yes webseek --help
+  manager: npx
+  notes: >-
+    No global install. The adapter invokes the CLI through npx and never pins or vendors it;
+    provider selection comes from options.provider or WEBSEEK_PROVIDER.
+run:
+  command: sak run --run RUN_DIR --step webseek --dry-run
+  notes: >-
+    Dry run needs no key. --execute is refused because the provider destination is not authorizable
+    by scope.md and each query is billed.
+adapter: webseek
+outputs:
+  - json
+evidence:
+  - url
+  - title
+  - snippet
+  - usage
+safety:
+  active: false
+  intrusive: false
+  destructive: false
+  notes: >-
+    Research only: contacts a search provider, never the assessment target. Queries are billed
+    by the provider; usage and cost fields are recorded when the CLI reports them.
+sources:
+  - url: https://www.npmjs.com/package/webseek
+    license: external
+    note: >-
+      Upstream license and provider API terms apply; not vendored. Confirm the npm package
+      name and provider terms before enabling the adapter for a real engagement.
+notes: >-
+  Dry-run and parser adapter only: execute is refused because the search provider, not scope.md,
+  chooses the destination and every query is billed. Fake-fixture JSON tests cover parsing, usage
+  extraction and the no-key dry run; no live provider was contacted. Parser: adapters/webseek.py
+  (parse and parse_usage), JSON results normalized to needs_validation candidates with usage/cost
+  fields preserved.

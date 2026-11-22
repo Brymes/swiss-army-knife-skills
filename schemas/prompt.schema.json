@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/prompt.schema.json",
+  "title": "sak prompt card",
+  "description": "A hunter, mutator, verifier or report prompt. Prompt cards never call a model themselves.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "category",
+    "description",
+    "domains",
+    "hunter_role",
+    "prompt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[0-9]{2}$",
+      "description": "Examples: INV-01, VIBE-14, SSRF-08, LLM-01, MUT-01, VER-01, REP-01."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "category": {
+      "type": "string",
+      "enum": ["invariant", "vibe", "ssrf", "llm", "mutation", "verification", "report", "orchestration"]
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "applies_to": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["web", "api", "source", "binary", "cloud", "osint", "macos", "llm", "network", "mobile"]
+      }
+    },
+    "hunter_role": {
+      "type": "string",
+      "enum": ["primary", "support", "fallback", "brute", "triage", "evidence"]
+    },
+    "intensity": { "type": "string", "enum": ["passive", "normal", "brute"] },
+    "when_to_use": { "type": "string" },
+    "prompt": { "type": "string", "minLength": 1 },
+    "inputs": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "mutations": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "prompt"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "prompt": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
+    },
+    "evidence": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "stop_conditions": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "safety": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "tags": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "source": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

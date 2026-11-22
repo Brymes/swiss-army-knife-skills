@@ -1,0 +1,27 @@
+id: fixture-beta
+name: Beta Prober
+kind: cli
+status: verified
+description: Quiet fixture prober that should rank first on score.
+license: MIT
+domains:
+  - web
+phases:
+  - recon
+modes:
+  - blackbox
+intensity: passive
+roles:
+  - primary
+ranking:
+  impact: 3
+  reliability: 5
+  stealth: 5
+  effort: 1
+  noise: 1
+requires:
+  - python3
+safety:
+  active: false
+  intrusive: false
+  notes: Passive fixture only.

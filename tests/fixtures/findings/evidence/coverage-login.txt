@@ -1,0 +1,3 @@
+GET /login HTTP/1.1 -> 200; POST /login with fixture credentials -> 302 /profile.
+Response body contains the profile page; the database error on the quote payload
+was observed in the same handler.

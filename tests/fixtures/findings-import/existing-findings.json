@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "run_id": "import-test",
+  "generated_at": "2026-11-15T10:00:00Z",
+  "findings": [
+    {
+      "id": "F-100",
+      "title": "Existing login SQL injection record",
+      "status": "needs_validation",
+      "severity": "high",
+      "asset": "http://127.0.0.1:8765",
+      "entrypoint": "/login",
+      "root_cause": "fixture-sqli",
+      "principal": "unknown",
+      "resource": "reported target",
+      "open_question": "Does the existing record reproduce against the fixture?",
+      "next_action": "Replay the recorded login request and attach evidence.",
+      "created_at": "2026-11-15T09:00:00Z",
+      "updated_at": "2026-11-15T09:00:00Z"
+    }
+  ],
+  "dedupe": []
+}

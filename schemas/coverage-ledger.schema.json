@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sak.local/schemas/coverage-ledger.schema.json",
+  "title": "sak coverage ledger",
+  "description": "What the run tested and what it did not. Trust boundaries are covered only when at least one probe executed with evidence; planned probes and scope exclusions are gaps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "boundaries"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "target": { "type": "string" },
+    "boundaries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/boundary" }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "status", "probes"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^TB-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["uncovered", "covered", "excluded"]
+        },
+        "probes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/probe" }
+        },
+        "gap": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "excluded" } },
+            "required": ["status"]
+          },
+          "then": { "required": ["gap"] }
+        }
+      ]
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "executed"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^P-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "description": { "type": "string", "minLength": 1 },
+        "executed": { "type": "boolean" },
+        "tool": { "type": "string" },
+        "executed_at": { "type": "string", "format": "date-time" },
+        "result": { "type": "string" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "executed": { "const": true } },
+            "required": ["executed"]
+          },
+          "then": {
+            "required": ["evidence"],
+            "properties": { "evidence": { "minItems": 1 } }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "path", "sha256", "timestamp", "producer"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^E-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "request",
+            "response",
+            "command",
+            "log",
+            "source",
+            "observed",
+            "screenshot",
+            "other"
+          ]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "producer": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      }
+    }
+  }
+}
