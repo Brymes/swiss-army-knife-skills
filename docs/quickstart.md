@@ -4,6 +4,11 @@ A clean checkout to a rendered report in about five minutes. Everything below is
 offline and loopback-only. The demo target is the repository's own vulnerable
 fixture, which is an authorized test target.
 
+For the agent-skill path, read [skill-usage.md](skill-usage.md),
+[harness-integration.md](harness-integration.md) and the optional
+[Kali MCP guide](kali-mcp.md). The CLI quickstart below needs no model or MCP
+server.
+
 ## 1. Prerequisites
 
 - `git`
