@@ -1,6 +1,7 @@
 # Model profiles
 
-Advisory notes on choosing a model per role. `sak` never calls a model and never stores a key;
+Advisory notes on choosing a model per role. `sak` never stores a key; only `sak hunt`
+starts a child model through its runner. The other commands are deterministic.
 these pages help a human or an agent harness pick a model and record the choice honestly.
 
 | File | Contents |

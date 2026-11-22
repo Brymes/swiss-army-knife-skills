@@ -1,8 +1,10 @@
 # Models — selection guidance
 
-`sak` does not call a model. It selects work, records evidence and produces a report; a human or an
-agent harness runs the model. This page is about choosing one per role, recording the choice, and
-not confusing a good model with good evidence.
+Most `sak` commands do not call a model: `plan`, `exploit`, `verify` and `report` are
+deterministic. `sak hunt` starts a child harness/model through its runner. This page is
+about choosing the model for that child, recording the choice, and not confusing a good
+model with good evidence. Runner setup is in
+[harness-integration.md](harness-integration.md).
 
 Model cards: `catalog/models.yaml` (`uv run sak catalog list --kind model`). Deeper notes:
 `knowledge/models/`.

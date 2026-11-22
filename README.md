@@ -58,7 +58,9 @@ For the OpenCode invocation, scope gate and evidence workflow, read
 
 ## Use your own harness and model
 
-The CLI is deterministic and does not call a model. The skill is plain Markdown, so
+The CLI is deterministic by default and stores no model key. Only `sak hunt` starts
+a model-driven child through its runner; `sak plan`, `sak exploit`, `sak verify`
+and `sak report` work without a model or a paid API. The skill is plain Markdown, so
 any harness that can read a skill, run a shell and pass a model can use it.
 
 - [Harness integration](docs/harness-integration.md) — OpenCode, Claude Code, Codex,
